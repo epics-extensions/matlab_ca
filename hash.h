@@ -2,8 +2,6 @@
 #define _INT_HASH_H_ 1
 
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 class IntHashNode
 {
