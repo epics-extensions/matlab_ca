@@ -1,0 +1,12 @@
+To build in the style of EPICS extensions:
+type make.
+next execute setup.matlab  to include the library
+and m files for use from within matlab.
+
+Well, this is not completely in the style of the EPICS make system
+but it is close enough.
+
+TODO: Convert completely to the EPICS Makefile style for R3.14
+
+Thanks to Kay Kasemir for his example Makefile used for the 
+Matlab Channel Archiver build.
