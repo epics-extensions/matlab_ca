@@ -670,7 +670,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				Err.Message(MCAError::MCAERR, "MCAPUT(80) can only be used for numeric PVs.");
 
 		}
-
+		break;
 	}
 
 	// MCAMON - install a monitor
