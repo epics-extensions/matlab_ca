@@ -1,5 +1,7 @@
 To build in the style of EPICS extensions:
 type make.
+type make install.
+
 next execute setup.matlab  to include the library
 and m files for use from within matlab.
 
