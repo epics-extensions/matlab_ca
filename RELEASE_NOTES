@@ -1,1 +1,24 @@
-Carl add something in here.
+Matlab Channel Access (MCA)
+
+SNS Release 3.0
+
+Carl Lionberger 18 June 2004
+
+This release incorporates changes done by Steven Banks of the Australian 
+Synchrotron Project.  (Steven_Banks@doi.vic.gov.au).  These include 
+reliability improvements due to queuing ca callbacks of matlab commands to
+prevent reentrancy problems and removal of the earlier fixed limitation on the
+number of channel access pv's in use.  Several examples are provided.
+
+A simpler EPICS Makefile style build using the EPICS build environment has
+been added.  This was done at SNS by Ernest Williams based on earlier work by 
+Kay Kasemir.  See README file.
+
+The mcaconn command present in some earlier SNS versions has been dropped.
+
+There is a timestamp facility but it is somewhat different than a previous
+version that was used only at SNS.
+
+This version is known to work under linux and windows.
+
+Our continuing thanks to Andrei Terebilo at SLAC for originally developing MCA. 
