@@ -801,7 +801,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				plhs[i] = mxDuplicateArray(Cache);
 			else
 				plhs[i] = mxCreateDoubleMatrix(0, 0, mxREAL);
-
 			Chan->ResetEventCount();
 
 		}

@@ -555,7 +555,12 @@ int Channel::AddEvent( caEventCallBackFunc *MonitorEventHandler ) {
 	int status;
 	MCAError Err;
 
-	status = ca_add_event(RequestType, ChannelID, MonitorEventHandler, this, &EventID);
+	/* Kay: monitor didn't work for array PVs
+         *
+         * status = ca_add_event(RequestType, ChannelID, MonitorEventHandler, this, &EventID);
+         */
+	status = ca_add_array_event(RequestType, ca_element_count(ChannelID), ChannelID,
+                                    MonitorEventHandler, this, 0.0, 0.0, 0.0, &EventID);
 	if (status != ECA_NORMAL)
 		Err.Message(MCAError::MCAERR, ca_message(status));
 
