@@ -6,14 +6,6 @@
 using namespace std;
 #endif
 
-#ifdef MSCC
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-
-#ifdef GCC
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-
 #include "mex.h"
 #include "matrix.h"
 
@@ -585,7 +577,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			if (mxIsChar(prhs[j]))
 				L = 1;
 			else
-				L = min(mxGetNumberOfElements(prhs[j]), Num);
+                        {       // min
+				L = mxGetNumberOfElements(prhs[j]);
+				if (L > Num)
+                                    L = Num;
+                        }
 
 			if (RequestType == DBR_TIME_STRING) {
 

@@ -1,4 +1,12 @@
 To build in the style of EPICS extensions:
+
+Check the first few lines of the Makefile.
+For MacOS X,
+	cp /Applications/MATLAB71/bin/mexopts.sh .
+and edit mexopts.sh:
+Find the CC=gcc3.3 and CXX=g++3.3 lines,
+change them to gcc resp. g++.
+
 type make.
 type make install.
 

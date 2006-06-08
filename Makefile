@@ -1,3 +1,17 @@
+# You have to set EPICS_HOST_ARCH, EPICS_BASE and EPICS_EXTENSIONS.
+# Matlab 'mex' must be in the path.
+
+#EPICS_BASE = /Users/kasemir/epics/R3.14.8.2/base
+#EPICS_EXTENSIONS = /Users/kasemir/epics/R3.14.8.2/extensions
+
+#EPICS_HOST_ARCH = darwin-ppc
+#OS_CLASS = Darwin
+#MEXOUT = mexmac
+
+# EPICS_HOST_ARCH = linux-x86
+# OS_CLASS = Linux
+# MEXOUT = mexglx
+
 all:    matlab
 
 OUT=O.$(EPICS_HOST_ARCH)
@@ -12,26 +26,26 @@ matlab: $(OUT) $(OUT)/mca.mexglx
 # understands the -v, -I, -L & -l syntax.
 
 # Do you want verbose compilation?
-FLAGS = -v
+FLAGS += -v
 
 # Includes -------------------------------------------
 # EPICS Base
-FLAGS += -I$(EPICS_BASE_RELEASE)/include
-FLAGS += -I$(EPICS_BASE_RELEASE)/include/os/$(HOST_ARCH)
+FLAGS += -I$(EPICS_BASE)/include
+FLAGS += -I$(EPICS_BASE)/include/os/$(OS_CLASS)
 FLAGS += -DEPICS_DLL_NO
 
 # Libraries ------------------------------------------
 # EPICS Base
-FLAGS += -L$(EPICS_BASE_RELEASE)/lib/$(EPICS_HOST_ARCH) -ldbStaticHost -lCom -lca
+FLAGS += -L$(EPICS_BASE)/lib/$(EPICS_HOST_ARCH) -ldbStaticHost -lCom -lca
 
 $(OUT):
 	mkdir $(OUT)
 
 $(OUT)/mca.mexglx: mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp
-	mex $(FLAGS) mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp -o $(OUT)/mca.mexglx
+	mex $(FLAGS) mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp -o $(OUT)/mca.$(MEXOUT)
 
 install:
-	cp O.$(EPICS_HOST_ARCH)/mca.mexglx $(EPICS_EXTENSIONS)/lib/$(EPICS_HOST_ARCH)
+	cp O.$(EPICS_HOST_ARCH)/mca.$(MEXOUT) $(EPICS_EXTENSIONS)/lib/$(EPICS_HOST_ARCH)
 
 clean:
 	-rm -rf $(OUT)

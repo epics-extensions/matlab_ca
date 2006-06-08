@@ -81,7 +81,7 @@ Node<T>* Node<T>::GetNext( void ) const {
 
 template <class T>
 Node<T>* Node<T>::GetPrev( void ) const {
-	return Prev;
+	return Previous;
 }
 
 template <class T>
@@ -120,13 +120,13 @@ template <class T>
 int Queue<T>::Size( void ) const {
 
 	int Count;
-	if (Empty()) {
+	if (IsEmpty()) {
 		Count = 0;
 	}
 	else {
 
 		Node<T> *CountPtr = HEAD;
-		for(Count = 1; CountPtr != TAIL; count++) {
+		for(Count = 1; CountPtr != TAIL; Count++) {
 			CountPtr = CountPtr->GetNext();
 		}
 	}
