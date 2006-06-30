@@ -1,0 +1,9 @@
+
+
+- There are no unit tests for anything.
+
+- Kay observed an ERROR: "No channel exists for this handle."
+  that wasn't reproducible.
+
+- Occasionally, Matlab crashes on exit after having used MCA.
+

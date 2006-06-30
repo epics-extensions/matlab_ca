@@ -10,6 +10,7 @@ he was at the SNS.
 Steven Banks (Australian Synchrotron Project) added
 enhancements like bug fixes and switching 'put' to
 use callbacks.
+Ernest Williams (SNS) simplified the setup, make file etc.
 Kay Kasemir (kasemirk@ornl.gov) fixed a minor array bug
 and merged the 'SNS' sources with Steven's.
 
