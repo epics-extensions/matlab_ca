@@ -1,6 +1,6 @@
 Matlab Channel Access (MCA)
 
-Kay Kasemir, June 30 2006
+* V 3.1 - Kay Kasemir, June 30 2006
 steven.banks@synchrotron.vic.gov.au emailed a snapshot
 of MCA as used at the Australian Synchroton Project.
 Compared that to the sources currently used at the SNS,
@@ -20,8 +20,10 @@ The A.S.P. sources included
 
 - mcaput now uses put_callback
 
+There's also a new 'mcaversion' command.
 
-SNS Release 3.0
+
+* SNS Release 3.0
 
 Carl Lionberger 18 June 2004
 
