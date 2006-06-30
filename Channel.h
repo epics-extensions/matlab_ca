@@ -29,7 +29,7 @@ public:
 	int GetState ( void ) const;
 	int GetNumElements ( void ) const;
 	chtype GetRequestType( void ) const;
-	char* GetRequestTypeStr( void ) const;
+	const char* GetRequestTypeStr( void ) const;
 	bool IsNumeric( void ) const;
 
 	// These methods must be used in combination:
@@ -50,11 +50,16 @@ public:
 	//
 	// 1) SetNumericValue - must be called first if IsNumeric() returns True
 	// 2) SetStringValue - must be called first if IsNumeric() returns False
-	// 3) PutValueToCA - use must be called last to send the value to CA
+	// 3) PutValueToCA - must be called next to send the value to CA
+	// 4) SetLastPutStatus - must be called in PutValueToCA callback
+	// 5) GetLastPutStatus - must be called last to determine if the Put succeeded
 	//
 	void SetNumericValue( int, double );
 	void SetStringValue ( int, char* );
+	void PutValueToCACallback ( int, caEventCallBackFunc * );
 	int PutValueToCA ( int ) const;
+	void SetLastPutStatus ( double );
+	double GetLastPutStatus( void ) const;
 
 	void SetMonitorString( const char*, int );
 	bool MonitorStringInstalled( void ) const;
@@ -87,6 +92,8 @@ private:
 	bool Connected;
 	int NumElements;
 	chtype RequestType;
+
+	double LastPutStatus;
 
 	union db_access_val* DataBuffer;
 	mxArray* Cache;

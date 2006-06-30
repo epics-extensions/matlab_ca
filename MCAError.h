@@ -4,14 +4,8 @@
 class MCAError  
 {
 public:
-
-	void Message(int, const char *);
-
-	enum { MCAINFO, MCAWARN, MCAERR };
-
-	MCAError( void );
-	~MCAError( void );
-
+    enum Level { MCAINFO, MCAWARN, MCAERR };
+    void Message(Level level, const char *msg);
 };
 
 #endif // mcaerror_h

@@ -32,29 +32,26 @@ MCAMONEVENTS
 MCAMONTIMER
 MCACLEARMON
 
-4. Build
-MCACOMPILE
-----------------------------------------------------------------------------------
-CONFIGURATION
+4. Compilation
+See README
 
-Add the location of CA DLL's (Ca.dll, Com.dll) to the system path
-For example
-... ;Q:\Groups\Accel\Controls\Epics\R3.13.4\base\bin\Win32; ...
+5. Configuration
+In order to use this with matlab, you need to add two entries to the
+matlab path:
+a) the location of the mex file
+b) the location of the mca *.m files
 
+See
+   setup.matlab
+for examples of those two 'addpath' calls
+and how one can automatically excute those on matlab startup
+when running on Linux.
 
-Add the MCA directory to the MATLAB path (Menu-File-Set Path)
------------------------------------------------------------------------------------
-Recomiling mex-files
-
-MCA mex-files (mca.dll and timereval.dll) are compiled from
-mca.cpp and timereval.cpp. I use MSVC++ 6.0 compiler.
-
-If you need to recompile them, the best way is to use MATLAB 'mex' command
-You will need to 'cd' to the MCA root directory.
-Examine the 'mexcommand' script included with MCA - it has all the right options.
+In addition, the EPICS base libraries (DLLs, *.so files)
+for Ca, Com, ... need to be in your $PATH.
 
 -----------------------------------------------------------------------------------
-The use of Windows System Timers extends the asynchronous
+The use of Timers extends the asynchronous
 capabilities of MATLAB and MCA. It is done with another
 mex-file (timereval.dll compiled from timereval.cpp)
 You could write your own m-file aliases with self-explanatory names

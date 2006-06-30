@@ -1,5 +1,26 @@
 Matlab Channel Access (MCA)
 
+Kay Kasemir, June 30 2006
+steven.banks@synchrotron.vic.gov.au emailed a snapshot
+of MCA as used at the Australian Synchroton Project.
+Compared that to the sources currently used at the SNS,
+and tried to merge the differences.
+
+The A.S.P. sources included
+- Fix for mcamonevents:
+  While
+     mcamonevents([pv1 pv2])
+  might have worked,
+     mcamonevents([pv2 pv1])
+  didn't. Now it always seems to work.
+
+- New
+     mcastate
+  command.
+
+- mcaput now uses put_callback
+
+
 SNS Release 3.0
 
 Carl Lionberger 18 June 2004

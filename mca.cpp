@@ -59,6 +59,21 @@ void mca_cleanup( void ) {
 
 }
 
+void mcaPutEventHandler( struct event_handler_args arg ) {
+
+        Channel *Chan = (Channel *) arg.usr;
+
+        // This callback writes the integer 1 on success
+        // and 0 on failure to the channel object specified
+        // by void* arg.usr
+        //
+        if (arg.status == ECA_NORMAL)
+                Chan->SetLastPutStatus(1);
+        else
+                Chan->SetLastPutStatus(0);
+
+}
+
 void mcaMonitorEventHandler( struct event_handler_args arg ) {
 
 	// The channel object passed in by the ca_add_event call.
@@ -98,11 +113,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	// If necessary, create and initialize the channel access service.
 	//
 	if (!CA.IsInitialized()) {
-
 		mexAtExit(mca_cleanup);
 		mexLock();
 
-		Err.Message(MCAError::MCAINFO, "Initializing MATLAB Channel Access...");
+		// Err.Message(MCAError::MCAINFO, "Initializing MATLAB Channel Access...");
 
 		// Initialise Channel Access
 		//
@@ -396,6 +410,88 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		break;
 	}
 
+        // MCASTATE - return an array of status for all open channels
+        //            (1 - OK, 0 - disconnected or cleared)
+        //
+        case 12:
+        {
+
+                int HandlesUsed = ChannelTable.size();
+
+                // Matrix of handles of connected PVs
+                //
+                plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+                double *myDblPr0 = mxGetPr(plhs[0]);
+
+                // Matrix of states of connected PVs
+                //
+                plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+                double *myDblPr1 = mxGetPr(plhs[1]);
+
+                // Loop through all the open channels
+                //
+                if (nrhs == 1) {
+
+                        if (HandlesUsed > 0) {
+
+                                // Create an iterator for the Channel Table and get the first element.
+                                //
+                                IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);
+                                Channel* Chan = (Channel *)ChannelIterator.first();
+
+                                //
+                                for (int i = 0; i < HandlesUsed; i++) {
+
+                                        myDblPr0[i] = (double)(Chan->GetHandle());
+                                        myDblPr1[i] = (double)(Chan->GetState() == 2);
+
+                                        // Get the next channel in the Table.
+                                        //
+                                        Chan = (Channel *)ChannelIterator++;
+
+                                }
+                        }
+                        else {
+                                mexWarnMsgTxt("No connected PVs found");
+                                plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
+                                plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
+                        }
+                }
+
+                break;
+        }
+
+        // MCASTATE - return an array of status for specified channels
+        //            (1 - OK, 0 - disconnected or cleared)
+        //
+        case 13:
+        {
+
+                int HandlesUsed = nrhs - 1;
+
+                // Matrix of states of connected PVs
+                //
+                plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+            double *myDblPr = mxGetPr(plhs[0]);
+
+                // Only loop through the supplied channels
+                //
+                for (int i = 0; i < HandlesUsed; i++) {
+
+                        int Handle = (int) mxGetScalar(prhs[i + 1]);
+
+
+                        Channel *Chan = (Channel *)ChannelTable.find(Handle);
+                        if (!Chan)
+                                Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+
+                        myDblPr[i] = (double)(Chan->GetState() == 2);
+
+                }
+
+                break;
+        }
+
 	// MCAPOLL - Poll Channel Access
 	//
 	case 30:
@@ -556,8 +652,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 		// Process each channel...
 		//
-		for (i = 0; i < NumHandles; i++) {
-
+		for (i = 0; i < NumHandles; i++)
+                {
 			int j = 2 + i * 2;
 
 			// Get the handle and find the channel
@@ -577,9 +673,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			if (mxIsChar(prhs[j]))
 				L = 1;
 			else
-                        {       // min
+                        {       // min(mxGetNumberOfElements(prhs[j]), Num)
 				L = mxGetNumberOfElements(prhs[j]);
-				if (L > Num)
+				if (Num < L)
                                     L = Num;
                         }
 
@@ -612,15 +708,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			// Put the values to Channel Access
 			//
-			int status = Chan->PutValueToCA(L);
-
+			// This used to be: Chan->PutValueToCA(L);
+                        Chan->PutValueToCACallback(L, mcaPutEventHandler);
 		}
 
 		plhs[0] = mxCreateDoubleMatrix(1, NumHandles, mxREAL);
 		myDblPr = mxGetPr(plhs[0]);
 
-		for (i = 0; i < NumHandles; i++) {
-			myDblPr[i] = 1;
+		for (i = 0; i < NumHandles; i++)
+                {
+                        int Handle = (int) mxGetScalar(prhs[1 + i * 2]);
+                        Channel *Chan = (Channel *)ChannelTable.find(Handle);
+                        myDblPr[i] = Chan->GetLastPutStatus();
+
+			// Before use of PutValueToCACallback:
+                        // myDblPr[i] = 1;
 		}
 
 		break;
@@ -654,13 +756,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				double Value = (*(mxGetPr(prhs[2]) + i));
 				Chan->SetNumericValue(0, Value);					
 				int status = Chan->PutValueToCA(1);
-
 				myDblPr = mxGetPr(plhs[0]);
-
-				if (status != ECA_NORMAL)
-					myDblPr[i] = 0;
-				else
-					myDblPr[i] = 1;		
+                                myDblPr[i] = status;
 			}
 			else
 				Err.Message(MCAError::MCAERR, "MCAPUT(80) can only be used for numeric PVs.");

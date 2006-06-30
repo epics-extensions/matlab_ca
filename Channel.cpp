@@ -21,6 +21,9 @@ Channel::Channel( const ChannelAccess* ChanAcc ) {
 	MonitorCBString = NULL;
 	DataBuffer = NULL;
 	Cache = NULL;
+	LastPutStatus = 0;
+	AlarmStatus = 0;
+	AlarmSeverity = 0;
 
 	ResetEventCount();
 
@@ -59,7 +62,7 @@ void Channel::AllocChanMem( void ) {
 	//
 	NumElements = ca_element_count(ChannelID);
 	RequestType = dbf_type_to_DBR_TIME(ca_field_type(ChannelID));
-			
+
 	// Allocate enough space for the data buffer.
 	//
 	if (DataBuffer)
@@ -108,7 +111,7 @@ int Channel::Connect(char* Name) {
 		status = CA->WaitForSearch();
 		if (status != ECA_NORMAL) {
 			ca_clear_channel(Chid);
-			Err.Message(MCAError::MCAERR, ca_message(status));
+			Handle = 0;
 		}
 		else
 		{
@@ -215,10 +218,9 @@ chid Channel::GetChannelID( void ) const {
 	return (ChannelID);
 }
 
-char* Channel::GetRequestTypeStr( void )  const {
+const char* Channel::GetRequestTypeStr( void )  const {
 
-	MCAError Err;
-	char* ReqString;
+	const char* ReqString;
 
 	switch (RequestType) {
 	case DBR_TIME_STRING:
@@ -246,6 +248,7 @@ char* Channel::GetRequestTypeStr( void )  const {
 		ReqString = "UNKNOWN";
 		break;		
 	}
+
 	return ReqString;
 
 }
@@ -331,8 +334,6 @@ double Channel::GetNumericValue( int Index ) const {
 		break;
 	case DBR_TIME_STRING:
 		Err.Message(MCAError::MCAERR, "GetNumericValue() cannot return a string value.");
-	default:
-		Err.Message(MCAError::MCAERR, "Unimplemented Request Type in GetNumericValue().");
 	}
 	return Val;
 
@@ -370,7 +371,7 @@ void Channel::SetNumericValue( int Index, double Value ) {
 
 	MCAError Err;
 
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
+	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
 	switch (Type) {
 	case DBR_INT:
 		*((dbr_short_t *) (DataBuffer) + Index) = (dbr_short_t) (Value);
@@ -392,8 +393,6 @@ void Channel::SetNumericValue( int Index, double Value ) {
 		break;
 	case DBR_STRING:
 		Err.Message(MCAError::MCAERR, "SetNumericValue() cannot take a String value.");
-	default:
-		Err.Message(MCAError::MCAERR, "Unimplemented Request Type in SetNumericValue().");
 	}
 
 }
@@ -402,30 +401,59 @@ void Channel::SetStringValue ( int Index, char* StrBuffer) {
 
 	MCAError Err;
 
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
+	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
 
 	switch (Type) {
 	case DBR_STRING:
 		strcpy((char *)(*((dbr_string_t *)(DataBuffer) + Index)), StrBuffer);
+		break;
 	default:
 		Err.Message(MCAError::MCAERR, "SetStringValue() must take a String value.");
 	}
 
 }
 
-int Channel::PutValueToCA ( int Size ) const {
+void Channel::PutValueToCACallback ( int Size, caEventCallBackFunc *PutEventHandler ) {
 
 	int status;
 	MCAError Err;
 
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
-	status = ca_array_put(Type, Size, ChannelID, DataBuffer);
-	if (status != ECA_NORMAL)
-		Err.Message(MCAError::MCAERR, ca_message(status));
+	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
+	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer, PutEventHandler, this);
+	if (status != ECA_NORMAL) {
+		Err.Message(MCAError::MCAINFO, "ca_array_put_callback failed");
+		LastPutStatus = 0;
+	}
 
 	status = CA->WaitForPut();
 
-	return (status);
+	return;
+}
+
+int Channel::PutValueToCA ( int Size ) const {
+
+	int status;
+	int RetVal;
+	MCAError Err;
+
+	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
+	status = ca_array_put(Type, Size, ChannelID, DataBuffer);
+	if (status != ECA_NORMAL)
+		RetVal = 0;
+	else
+		RetVal = 1;
+
+	status = CA->WaitForPutIO();
+
+	return (RetVal);
+}
+
+void Channel::SetLastPutStatus( double Status ) {
+	LastPutStatus = Status;
+}
+
+double Channel::GetLastPutStatus( void ) const {
+	return (LastPutStatus);
 }
 
 void Channel::SetMonitorString(const char* MonString, int buflen) {
@@ -555,12 +583,8 @@ int Channel::AddEvent( caEventCallBackFunc *MonitorEventHandler ) {
 	int status;
 	MCAError Err;
 
-	/* Kay: monitor didn't work for array PVs
-         *
-         * status = ca_add_event(RequestType, ChannelID, MonitorEventHandler, this, &EventID);
-         */
-	status = ca_add_array_event(RequestType, ca_element_count(ChannelID), ChannelID,
-                                    MonitorEventHandler, this, 0.0, 0.0, 0.0, &EventID);
+ 	status = ca_add_array_event(RequestType, ca_element_count(ChannelID), ChannelID,
+                                  MonitorEventHandler, this, 0.0, 0.0, 0.0, &EventID);
 	if (status != ECA_NORMAL)
 		Err.Message(MCAError::MCAERR, ca_message(status));
 

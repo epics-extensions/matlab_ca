@@ -29,6 +29,7 @@ public:
 	void SetPutTimeout( double );
 	double GetPutTimeout( void ) const;
 	int WaitForPut( void ) const;
+	int WaitForPutIO( void ) const;
 
 private:
 	static bool CA_Initialized;

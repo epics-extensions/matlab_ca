@@ -1,16 +1,23 @@
-# You have to set EPICS_HOST_ARCH, EPICS_BASE and EPICS_EXTENSIONS.
-# Matlab 'mex' must be in the path.
+# Matlab 'mex' must be in the path,
+# and you have to either configure the following
+# or set them as environment variables.
 
 #EPICS_BASE = /Users/kasemir/epics/R3.14.8.2/base
 #EPICS_EXTENSIONS = /Users/kasemir/epics/R3.14.8.2/extensions
 
-#EPICS_HOST_ARCH = darwin-ppc
-#OS_CLASS = Darwin
-#MEXOUT = mexmac
+ifeq ($(EPICS_HOST_ARCH),darwin-ppc)
+OS_CLASS = Darwin
+MEXOUT = mexmac
+endif
 
-# EPICS_HOST_ARCH = linux-x86
-# OS_CLASS = Linux
-# MEXOUT = mexglx
+ifeq ($(EPICS_HOST_ARCH),linux-x86)
+OS_CLASS = Linux
+MEXOUT = mexglx
+endif
+
+ifndef MEXOUT
+$(error Check the Makefile, handle your EPICS_HOST_ARCH)
+endif
 
 all:    matlab
 

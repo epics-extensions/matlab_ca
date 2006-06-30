@@ -2,31 +2,23 @@
 #include "mex.h"
 #include "MCAError.h"
 
-MCAError::MCAError( void )
+void MCAError::Message(Level level, const char *msg)
 {
-}
-
-MCAError::~MCAError( void )
-{
-
-}
-
-void MCAError::Message(int Level, const char* Mesg)
-{
-
-	switch (Level) {
-	case MCAINFO:
-		mexPrintf(Mesg);
-		mexPrintf("\n");
-		break;
-	case MCAWARN:
-		mexWarnMsgTxt(Mesg);
-		mexPrintf("\n");
-		break;
-	case MCAERR:
-		mexErrMsgTxt(Mesg);
-	default:
-		mexPrintf("MCAError.Message: Invalid Option\n");
-	}
+    switch (level)
+    {
+    case MCAINFO:
+        mexPrintf(msg);
+        mexPrintf("\n");
+        break;
+    case MCAWARN:
+        mexWarnMsgTxt(msg);
+        mexPrintf("\n");
+        break;
+    case MCAERR:
+        mexErrMsgTxt(msg);
+        break;
+    default:
+        mexPrintf("MCAError.Message: Invalid Option\n");
+    }
 }
 

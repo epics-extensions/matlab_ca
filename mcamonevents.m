@@ -15,5 +15,8 @@ if nargin == 0
     varargout{1} = handles;
     varargout{2} = count;
 elseif nargin > 0 & isnumeric(varargin{1})
-    varargout{1} = count(find(handles==varargin{1}));
+    for i=1:length(varargin{1})
+        ind(i)=find(handles==varargin{1}(i));
+    end
+    varargout{1} = count(ind);
 end

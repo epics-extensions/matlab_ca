@@ -77,7 +77,8 @@ int ChannelAccess::WaitForSearch( void ) const
 	if (CA_Initialized)
 		status = ca_pend_io(MCA_SEARCH_TIMEOUT);
 	else
-		Err.Message(MCAError::MCAERR,"Attempt to call Channel Access pend_io() when not initialised.");
+		Err.Message(MCAError::MCAERR,
+                    "Attempt to call ca_pend_io() when not initialised.");
 
 	return (status);
 
@@ -102,7 +103,8 @@ int ChannelAccess::WaitForGet( void ) const
 	if (CA_Initialized)
 		status = ca_pend_io(MCA_GET_TIMEOUT);
 	else
-		Err.Message(MCAError::MCAERR,"Attempt to call Channel Access pend_io() when not initialised.");
+		Err.Message(MCAError::MCAERR,
+                    "Attempt to call ca_pend_io() when not initialised.");
 
 	return (status);
 
@@ -127,10 +129,21 @@ int ChannelAccess::WaitForPut( void ) const
 	if (CA_Initialized)
 		status = ca_pend_event(MCA_PUT_TIMEOUT);
 	else
-		Err.Message(MCAError::MCAERR,"Attempt to call Channel Access pend_evet() when not initialised.");
+		Err.Message(MCAError::MCAERR,
+                    "Attempt to call ca_pend_nt() when not initialised.");
 
 	return (status);
-
 }
 
+int ChannelAccess::WaitForPutIO( void ) const
+{
+	MCAError Err;
+	int status;
 
+	if (CA_Initialized)
+		status = ca_pend_io(MCA_PUT_TIMEOUT);
+	else
+		Err.Message(MCAError::MCAERR,
+                    "Attempt to call ca_pend_io() when not initialised.");
+	return (status);
+}
