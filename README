@@ -1,6 +1,20 @@
+Overview
+========
+MCA is an EPICS ChannelAccess client interface for Matlab.
+
+It isn't really maintained by anybody.
+
+Andrei Terebilo (SLAC) is the original author.
+Carl Lionberger (LBL) maintained it for a while when
+he was at the SNS.
+Steven Banks (Australian Synchrotron Project) added
+enhancements like bug fixes and switching 'put' to
+use callbacks.
+Kay Kasemir (kasemirk@ornl.gov) fixed a minor array bug
+and merged the 'SNS' sources with Steven's.
+
 Compilation
 ===========
-
 In principle, the Matlab 'mex' command takes care of
 invoking the correct compiler & linker for your
 platform and your version of Matlab.
