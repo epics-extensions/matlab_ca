@@ -13,11 +13,6 @@ public:
 
 	virtual ~Channel();
 
-	bool IsConnected() const
-    {   return Connected;  }
-    
-	void Disconnect();
-
 	int GetHandle() const
     {   return (Handle); }
     
@@ -33,7 +28,9 @@ public:
         return "<unknown>";
     }
     
-	int GetState () const;
+	int GetState () const
+    {   return ChannelID ? ca_state(ChannelID) : cs_never_conn; }
+    
 	int GetNumElements () const;
 	chtype GetRequestType() const;
 	const char* GetRequestTypeStr() const;
@@ -105,8 +102,6 @@ private:
 	chid ChannelID;				// CA channel identifier.
 	evid EventID;				// CA evnet identifier.  If a channel is not
                                 // monitored then EventID == NULL.
-    bool Connected;
-
 	char* MonitorCBString;		// Pointer to the MCA callback string for monitor
 	char* HostName;				// The name of the host name where the PV connected
     union db_access_val* DataBuffer;

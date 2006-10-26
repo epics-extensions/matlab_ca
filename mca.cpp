@@ -61,7 +61,6 @@ void mca_cleanup()
 		int Handle = Chan->GetHandle();
 		ChannelTable.remove(Handle);
 		Chan->ClearEvent();
-		Chan->Disconnect();
 		delete Chan;
 
 		// Get the next channel in the Table.
@@ -113,6 +112,36 @@ void mcaMonitorEventHandler( struct event_handler_args arg )
 	}
 }
 
+// Helper for mcainfo, fills one row in array with info for channel
+static const char* MCAInfoFields[] = { "Handle", "PVName", "ElementCount", "NativeType", "State", "MCAMessage", "Host" };
+static void getChannelInfo(Channel *Chan, mxArray *matrix, int row)
+{
+    mxSetFieldByNumber(matrix, row, 0, mxCreateScalarDouble(Chan->GetHandle()));
+    mxSetFieldByNumber(matrix, row, 1, mxCreateString(Chan->GetPVName()));
+    mxSetFieldByNumber(matrix, row, 2, mxCreateScalarDouble(Chan->GetNumElements()));
+    switch (Chan->GetState())
+    {
+    case cs_conn:
+        mxSetFieldByNumber(matrix, row, 3, mxCreateString(Chan->GetRequestTypeStr()));
+        mxSetFieldByNumber(matrix, row, 4, mxCreateString("connected"));
+        mxSetFieldByNumber(matrix, row, 5, mxCreateString("Normal connection"));
+        break;
+
+    case cs_closed:
+        mxSetFieldByNumber(matrix, row, 3, mxCreateString("unknown"));
+        mxSetFieldByNumber(matrix, row, 4, mxCreateString("disconnected"));
+        mxSetFieldByNumber(matrix, row, 5, mxCreateString("Permanently disconnected (cleared)"));
+        break;
+
+    default:
+        mxSetFieldByNumber(matrix, row, 3, mxCreateString("unknown"));
+        mxSetFieldByNumber(matrix, row, 4, mxCreateString("disconnected"));
+        mxSetFieldByNumber(matrix, row, 5, mxCreateString("Disconnected due to server or network problem"));
+        break;
+    }
+    mxSetFieldByNumber(matrix, row, 6, mxCreateString(Chan->GetHostName()));
+}
+
 // All the matlab calls end up in here.
 // This routine is ugly, one big switch for all the
 // 'mca(...)' calls, and most important there's no
@@ -122,7 +151,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 	int status = 0;
 	char PVName[PVNAME_SZ + 1];
-	const char* MCAInfoFields[] = { "Handle", "PVName", "ElementCount", "NativeType", "State", "MCAMessage", "Host" };
 
 	// Lazy initialization
 	if (CA == 0)
@@ -136,6 +164,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int	commandswitch = (int) mxGetScalar(prhs[0]);
 	switch (commandswitch)
     {
+    case -1:   // MCAVERSION - This is where the version string gets defined!
+        plhs[0] = mxCreateString("4.0");
+        break;
+        
 	case 0:    // MCAUNLOCK - unlocks the mex file so it can be cleared from memory with clear
 		mexUnlock();
 		break;
@@ -197,32 +229,27 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCACHECK - Check if PV is connected.
-	//
-	case 4:
+	case 4:    // MCACHECK - Check if PV is connected.
 	{
 		plhs[0] = mxCreateDoubleMatrix(1, nrhs - 1, mxREAL);
 		double *myDblPr = mxGetPr(plhs[0]);
-		for (int i = 0; i < nrhs - 1; i++) {
-
-			// Retrieve the Channel from the Channel Table.
+		for (int i = 0; i < nrhs - 1; i++)
+        {
 			// (First argument of prhs is the command switch)
-			//
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
-			if (!Chan) {
+			if (!Chan)
+            {
 				myDblPr[i] = 0;
 				MCAError::Error("mcacheck(%d): Invalid handle.", Handle);
 			}
 			else
-				myDblPr[i] = (((double)Chan->GetState()) == cs_conn) ? 1 : 0;
+				myDblPr[i] = (double) (Chan->GetState() == cs_conn);
 		}
 		break;
 	}
 
-	// MCACLOSE - Close one channel
-	//
-	case 5:
+	case 5:    // MCACLOSE - Close one channel
 	{
         for (int i = 0; i < nrhs - 1; i++)
         {
@@ -234,7 +261,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     		else 
             {
     			ChannelTable.remove(Handle);
-    			Chan->Disconnect();
     			delete Chan;
     		}
         }
@@ -244,112 +270,47 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	// MCAINFO - Returns two lists:
 	//				a) A double matrix of handles of PVs
 	//              b) Channel information as a MATLAB structure array
-	//
 	case 10:
 	{
 		int HandlesUsed = ChannelTable.size();
-		if (HandlesUsed > 0) {
-
-			// Matrix of handles of connected PVs
-			//
+		if (HandlesUsed > 0)
+        {
 			plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
-			double *myDblPr = mxGetPr(plhs[0]);
-
-			// Create the structure matrix
-			//
-			plhs[1] = mxCreateStructMatrix(1, HandlesUsed, 7, MCAInfoFields);
+			double *handles = mxGetPr(plhs[0]);
+            plhs[1] = mxCreateStructMatrix(1, HandlesUsed, 7, MCAInfoFields);
 
 			// Create an iterator for the Channel Table and get the first element.
-			//
 			IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
 			Channel* Chan = (Channel *)ChannelIterator.first();
-
 			// Retrieve each element in the Channel Table and add its
 			// info into the array.
-			//
-			for (int i = 0; i < HandlesUsed; i++) {
-
-				mxSetFieldByNumber(plhs[1], i, 0, mxCreateScalarDouble(Chan->GetHandle()));
-				mxSetFieldByNumber(plhs[1], i, 1, mxCreateString(Chan->GetPVName()));
-				mxSetFieldByNumber(plhs[1], i, 2, mxCreateScalarDouble(Chan->GetNumElements()));
-				mxSetFieldByNumber(plhs[1], i, 6, mxCreateString(Chan->GetHostName()));
-
-				switch (Chan->GetState()) {
-				case 1:
-					mxSetFieldByNumber(plhs[1], i, 3, mxCreateString("unknown"));
-					mxSetFieldByNumber(plhs[1], i, 4, mxCreateString("disconnected"));
-					mxSetFieldByNumber(plhs[1], i, 5, mxCreateString("Disconnected due to server or network problem"));
-					break;
-
-				case 2:
-					mxSetFieldByNumber(plhs[1], i, 3, mxCreateString(Chan->GetRequestTypeStr()));
-					mxSetFieldByNumber(plhs[1], i, 4, mxCreateString("connected"));
-					mxSetFieldByNumber(plhs[1], i, 5, mxCreateString("Normal connection"));
-					break;
-
-				case 3:
-					mxSetFieldByNumber(plhs[1], i, 3, mxCreateString("unknown"));
-					mxSetFieldByNumber(plhs[1], i, 4, mxCreateString("disconnected"));
-					mxSetFieldByNumber(plhs[1], i, 5, mxCreateString("Permanently disconnected (cleared)"));
-					break;
-
-				}
-
-				// Save the handle in an array
-				//
-				myDblPr[i] = Chan->GetHandle();
-
+			for (int i = 0; i < HandlesUsed; i++)
+            {
+                getChannelInfo(Chan, plhs[1], i);
+				handles[i] = Chan->GetHandle();
 				Chan = (Channel *)ChannelIterator++;
 			}
 		}
-		else {
+		else
+        {
 			MCAError::Warn("mcainfo: No connected PVs found.");
 			plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
 			plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
 		}
-
 		break;
 	}
 
 	// MCAINFO - Returns Channel information for one Channel
-	//
 	case 11:
 	{
 		int Handle = (int) mxGetScalar(prhs[1]);
-
-		// Retrieve the Channel from the Channel Table.
-		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
             MCAError::Error("mcainfo(%d): Invalid handle.", Handle);
-		else {
+		else
+        {
 			plhs[0] = mxCreateStructMatrix(1, 1, 7, MCAInfoFields);
-
-			mxSetFieldByNumber(plhs[0], 0, 0, mxCreateScalarDouble(Chan->GetHandle()));
-			mxSetFieldByNumber(plhs[0], 0, 1, mxCreateString(Chan->GetPVName()));
-			mxSetFieldByNumber(plhs[0], 0, 2, mxCreateScalarDouble(Chan->GetNumElements()));
-			mxSetFieldByNumber(plhs[0], 0, 6, mxCreateString(Chan->GetHostName()));
-
-			switch (Chan->GetState()) {
-			case 1:
-				mxSetFieldByNumber(plhs[0], 0, 3, mxCreateString("unknown"));
-				mxSetFieldByNumber(plhs[0], 0, 4, mxCreateString("disconnected"));
-				mxSetFieldByNumber(plhs[0], 0, 5, mxCreateString("Disconnected due to server or network problem"));
-				break;
-
-			case 2:
-				mxSetFieldByNumber(plhs[0], 0, 3, mxCreateString(Chan->GetRequestTypeStr()));
-				mxSetFieldByNumber(plhs[0], 0, 4, mxCreateString("connected"));
-				mxSetFieldByNumber(plhs[0], 0, 5, mxCreateString("Normal connection"));
-				break;
-
-			case 3:
-				mxSetFieldByNumber(plhs[0], 0, 3, mxCreateString("unknown"));
-				mxSetFieldByNumber(plhs[0], 0, 4, mxCreateString("disconnected"));
-				mxSetFieldByNumber(plhs[0], 0, 5, mxCreateString("Permanently disconnected (cleared)"));
-				break;
-
-			}
+            getChannelInfo(Chan, plhs[0], 0);
 		}
 		break;
 	}
@@ -422,7 +383,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                     if (!Chan)
                         MCAError::Error("mcastate(%): Invalid handle.", Handle);
 
-                    myDblPr[i] = (double)(Chan->GetState() == 2);
+                    myDblPr[i] = (double)(Chan->GetState() == cs_conn);
             }
             break;
         }

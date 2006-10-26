@@ -7,6 +7,8 @@ tests = str2func(suite([mfilename '.m']));
 
 %========================================================================
 
+function testVersion
+assertEquals('Version test', '4.0', mcaversion); 
 
 function testNonsense
 try
@@ -37,6 +39,11 @@ pv = mcaopen('fred');
 [h, names] = mcaopen;
 assertEquals('One channel', 1, length(h));
 assertEquals('Correct name', 'fred', names{1});
+info = mcainfo(pv);
+assertEquals('info handle', pv, info.Handle);
+assertEquals('info name', 'fred', info.PVName);
+assertEquals('info type', 'DOUBLE', info.NativeType);
+assertEquals('info count', 1, info.ElementCount);
 mcaclose(pv);
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));
@@ -47,6 +54,10 @@ function testMutipleOpenClose
 assertEquals('Two channels', 2, length(h));
 assertEquals('Correct name', 'fred', names{1});
 assertEquals('Correct name', 'janet', names{2});
+[h, infos] = mcainfo;
+assertEquals('Two channels', 2, length(h));
+assertEquals('Correct name', 'fred', infos(1).PVName);
+assertEquals('Correct name', 'janet', infos(2).PVName);
 mcaclose(pv2, pv);
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));

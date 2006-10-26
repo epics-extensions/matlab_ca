@@ -22,7 +22,6 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       PVName(mxStrDup(Name)),
       ChannelID(0),
       EventID(0),
-      Connected(false),
       MonitorCBString(0),
       HostName(0),
       DataBuffer(0),
@@ -39,6 +38,7 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
     if (status != ECA_NORMAL)
     {
         MCAError::Error("ca_create_channel: %s\n", ca_message(status));
+        ChannelID = 0;
         return;
     }
     status = CA->WaitForSearch();
@@ -46,11 +46,9 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
     {
         MCAError::Error("WaitForSearch: %s\n", ca_message(status));
         ca_clear_channel(ChannelID);
+        ChannelID = 0;
         return;
     }
-
-    // Channel is now successfully connected.
-    Connected = true;
 
     // Obtain the name of the Host where the PV is sourced from.
     HostName = mxStrDup(ca_host_name(ChannelID));
@@ -61,15 +59,14 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
 
 Channel::~Channel()
 {
-	int status;
-
-	if (Connected)
+    // Disconnect
+    if (ChannelID)
     {
-		status = ca_clear_channel(ChannelID);
-		if (status != ECA_NORMAL)
+        int status = ca_clear_channel(ChannelID);
+        ChannelID = 0;
+        if (status != ECA_NORMAL)
             MCAError::Error("ca_clear_channel: %s\n", ca_message(status));
-	}
-	ChannelID = NULL;
+    }
 
 	mxFree(PVName);	
     PVName = 0;
@@ -127,22 +124,6 @@ void Channel::AllocChanMem()
 		Cache = mxCreateDoubleMatrix(1, NumElements, mxREAL);
 	}
 	mexMakeArrayPersistent(Cache);
-}
-
-void Channel::Disconnect() {
-
-	int status;
-
-	if (Connected) {
-		status = ca_clear_channel(ChannelID);
-		if (status != ECA_NORMAL)
-            MCAError::Error("ca_clear_channel: %s\n", ca_message(status));
-	}
-	Connected = false;
-}
-
-int Channel::GetState () const {
-	return (ca_state(ChannelID));
 }
 
 int Channel::GetNumElements () const {
