@@ -33,10 +33,16 @@ private:
 	IntHashNode<T> *next;
 };
 
+// forward
+template<class T>
+class IntHashIterator;
+
 /** Hash, mapping integer keys to 'T' pointers. */ 
 template<class T>
 class IntHash
 {
+    friend class IntHashIterator<T>;
+    
 public:
     IntHash  ( void )
         : Elements(0)
@@ -128,93 +134,46 @@ private:
     int Elements;
 };
 
-#if 0
+/** Iterator for the hash. */ 
+template<class T>
 class IntHashIterator
 {
-private:
-	IntHash     * hashTbl;
-	IntHashNode * node;
-	int           idx;	
-
 public:
-	IntHashIterator( IntHash * HashTbl );	
-	~IntHashIterator( void );
-	
-	inline void * first       ( void );
-	inline void * operator ++ ( void );
-	inline void * operator ++ ( int x );
-	inline int    key         ( void );
-	inline void * data        ( void );
+    IntHashIterator(IntHash<T> &hash)
+        : hash(hash), idx(-1), node(0)
+    {}
+    
+    T *next()
+    {   // init: node 0, idx -1
+        if (node)
+            node = node->getNext();
+        if (!node)
+        {
+            while (++idx < hash.HASH_CNT)
+            {
+                node = hash.nodes[idx];
+                if (node)
+                    break;
+            }
+        }
+        return getValue();
+    }
+    
+    int getKey() const
+    {
+        return node ? node->getKey() : 0;
+    }
+    
+    T *getValue() const 
+    {
+        return node ? node->getValue() : 0;
+    }
+
+private:
+    IntHash<T>    &hash;
+    int           idx;  
+    IntHashNode<T> *node;
 };
 
-inline IntHashIterator::IntHashIterator(IntHash * HashTbl)
-	: hashTbl(HashTbl), idx(0), node(NULL)
-	{
-	}
-	
-inline IntHashIterator::~IntHashIterator( void ) 
-	{
-	}
-	
-inline void * IntHashIterator::first ( void )
-	{
-	if(hashTbl!=NULL)
-		{
-		for(idx = 0; idx<IntHash::HASH_CNT &&
-		   (node = hashTbl->nodes[idx])==NULL; idx++);
-		}
-	else node = NULL;
-	return (node!=NULL)?node->hashData:NULL;
-	}
-	
-inline void * IntHashIterator::operator ++ ( void )
-	{
-	if(hashTbl!=NULL)
-		{
-		if(node==NULL) first();
-		else if(node->next!=NULL) node = node->next;
-		else 
-			{
-			node = NULL;
-			do 	{
-				idx++;
-				} while(idx<IntHash::HASH_CNT && 
-				       (node = hashTbl->nodes[idx])==NULL);
-			}
-		}
-	else node = NULL;
-	return (node!=NULL)?node->hashData:NULL;
-	}
-	
-inline void * IntHashIterator::operator ++ ( int x )
-	{
-	if(hashTbl!=NULL && x==0)
-		{
-		if(node==NULL) first();
-		else if(node->next!=NULL) node = node->next;
-		else 
-			{
-			node = NULL;
-			do 	{
-				idx++;
-				} while(idx<IntHash::HASH_CNT && 
-				       (node = hashTbl->nodes[idx])==NULL);
-			}
-		}
-	else node = NULL;
-	return (node!=NULL)?node->hashData:NULL;
-	}
-
-inline int IntHashIterator::key ( void )
-	{
-	return (node!=NULL)?node->hashInt:NULL;
-	}
-	
-inline void * IntHashIterator::data ( void )
-	{
-	return (node!=NULL)?node->hashData:NULL;
-	}
-
-#endif
 
 #endif /* _INT_HASH_H_ */

@@ -3,11 +3,12 @@
 
 int main()
 {
-    static const int N = 50000;
+    static const int N = 5000;
     IntHash<double> hash;
+    int i;
     
     puts("Add & find...");
-    for (int i=0; i<N; ++i)
+    for (i=0; i<N; ++i)
     {
         double *d = new double;
         *d = (double)i;
@@ -30,8 +31,28 @@ int main()
         return -1;
     }
     
+    puts("Iterate...");
+    IntHashIterator<double> iter(hash);
+    i = 0;
+    double *d;
+    while (d = iter.next())
+    {
+        ++i;
+        if (iter.getKey() != (int)*d  ||
+            iter.getValue() != d)
+        {
+            printf("braindead iter\n");
+            return -1;
+        }
+    }
+    if (i != N)
+    {
+        printf("wrong iter count: %d\n", i);
+        return -1;
+    }
+    
     puts("Find & remove...");
-    for (int i=0; i<N; ++i)
+    for (i=0; i<N; ++i)
     {
         double *f = hash.find(i);
         if (!f)
