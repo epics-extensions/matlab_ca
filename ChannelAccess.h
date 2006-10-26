@@ -1,44 +1,77 @@
 #ifndef channelaccess_h
 #define channelaccess_h
 
-class Channel;
+// Base
+#include <cadef.h>
+// Local
+#include "MCAError.h"
 
-class ChannelAccess { 
-
+// Wrapper around CAC context
+class ChannelAccess
+{ 
 public:
+	// Constructor creates CA context
+	ChannelAccess()
+    {
+        MCAError::Message(MCAError::MCAINFO, "MCA Initialized");
+        SetDefaultTimeouts();
+        int status = ca_context_create(ca_enable_preemptive_callback);
+        if (status != ECA_NORMAL)
+            MCAError::Message(MCAError::MCAERR, ca_message(status));
+    }
 
-	// Constructor
-	ChannelAccess( void );
+    // Destructor destroys CA context
+    virtual ~ChannelAccess()
+    {
+        ca_context_destroy();
+        MCAError::Message(MCAError::MCAINFO, "MCA Finalized");
+    }
 
-	// Destructor
-	virtual ~ChannelAccess( void );
+	void SetDefaultTimeouts()
+    {
+        MCA_SEARCH_TIMEOUT = DEFAULT_SEARCH_TIMEOUT;
+        MCA_GET_TIMEOUT = DEFAULT_GET_TIMEOUT;
+        MCA_PUT_TIMEOUT = DEFAULT_PUT_TIMEOUT;
+    }
 
-	void Initialize( void );
-	bool IsInitialized( void ) const;
+	void SetSearchTimeout(double SearchTimeOut )
+    {   MCA_SEARCH_TIMEOUT = SearchTimeOut; }
+    
+	double GetSearchTimeout() const
+    {  return (MCA_SEARCH_TIMEOUT); }
+    
+	int WaitForSearch() const
+    {  return ca_pend_io(MCA_SEARCH_TIMEOUT); }
 
-	void SetDefaultTimeouts( void );
+	void SetGetTimeout(double GetTimeOut)
+    {  MCA_GET_TIMEOUT = GetTimeOut; }
+    
+	double GetGetTimeout() const
+    {  return MCA_GET_TIMEOUT; }
+    
+	int WaitForGet() const
+    {   return ca_pend_io(MCA_GET_TIMEOUT); }
 
-	void SetSearchTimeout( double );
-	double GetSearchTimeout( void ) const;
-	int WaitForSearch( void ) const;
+    void SetPutTimeout(double PutTimeOut)
+    {   MCA_PUT_TIMEOUT = PutTimeOut; }
 
-	void SetGetTimeout( double );
-	double GetGetTimeout( void ) const;
-	int WaitForGet( void ) const;
+    double GetPutTimeout() const
+    {   return MCA_PUT_TIMEOUT; }
 
-	void SetPutTimeout( double );
-	double GetPutTimeout( void ) const;
-	int WaitForPut( void ) const;
-	int WaitForPutIO( void ) const;
+    int ChannelAccess::WaitForPut() const
+    {   return ca_pend_event(MCA_PUT_TIMEOUT); }
+
+    int ChannelAccess::WaitForPutIO() const
+    {   return ca_pend_io(MCA_PUT_TIMEOUT); }
 
 private:
-	static bool CA_Initialized;
+    static const double DEFAULT_SEARCH_TIMEOUT = 1.0;
+    static const double DEFAULT_GET_TIMEOUT = 5.0;
+    static const double DEFAULT_PUT_TIMEOUT = 0.01;
 
 	double MCA_SEARCH_TIMEOUT;
 	double MCA_GET_TIMEOUT;
 	double MCA_PUT_TIMEOUT;
-
-
 };
 
 #endif // channelaccess_h

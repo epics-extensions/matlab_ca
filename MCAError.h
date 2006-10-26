@@ -5,7 +5,7 @@ class MCAError
 {
 public:
     enum Level { MCAINFO, MCAWARN, MCAERR };
-    void Message(Level level, const char *msg);
+    static void Message(Level level, const char *msg);
 };
 
 #endif // mcaerror_h

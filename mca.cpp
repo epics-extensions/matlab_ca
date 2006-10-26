@@ -1,4 +1,5 @@
 
+// System
 #ifdef BCC
 #include <cstdlib>
 #include <iostream>
@@ -6,38 +7,39 @@
 using namespace std;
 #endif
 
+// Matlab
 #include "mex.h"
 #include "matrix.h"
 
+// Base
+#include <shareLib.h>
+#include <cadef.h>
+#include <epicsMutex.h>
+#include <tsDefs.h>
+#include <dBDefs.h>
+
+// Local
 #include "ChannelAccess.h"
 #include "Channel.h"
 #include "hash.h"
 #include "queue.h"
 #include "MCAError.h"
 
-#include <shareLib.h>
-#include <cadef.h>
-#include <epicsMutex.h>
-#include <tsDefs.h>
-
-#define PV_NAME_LENGTH_MAX 51
-
-static ChannelAccess CA;
+static ChannelAccess *CA = 0;
 static IntHash ChannelTable;
 
-epicsMutex mutex;
+static epicsMutex mutex;
 static Queue<int> MonitorQueue;
 
-void mca_cleanup( void ) {
-
+void mca_cleanup()
+{
 	int HandlesUsed = ChannelTable.size();
 	IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
 
 	// Delete all the channels from the Channel Table
-	//
 	Channel *Chan = (Channel *)ChannelIterator.first();
-	for (int i = 0; i < HandlesUsed; i++) {
-
+	for (int i = 0; i < HandlesUsed; i++)
+    {
 		int Handle = Chan->GetHandle();
 		ChannelTable.remove(Handle);
 		Chan->ClearEvent();
@@ -45,22 +47,20 @@ void mca_cleanup( void ) {
 		delete Chan;
 
 		// Get the next channel in the Table.
-		//
 		Chan = (Channel *)ChannelIterator++;
-	
 	}
 
 	// Empty the Monitor Command Queue
-	//
 	mutex.lock();
 	while(!MonitorQueue.IsEmpty())
 		int Tmp = MonitorQueue.Dequeue();
 	mutex.unlock();
-
+    delete CA;
+    CA = 0;
 }
 
-void mcaPutEventHandler( struct event_handler_args arg ) {
-
+void mcaPutEventHandler( struct event_handler_args arg )
+{
         Channel *Chan = (Channel *) arg.usr;
 
         // This callback writes the integer 1 on success
@@ -71,73 +71,59 @@ void mcaPutEventHandler( struct event_handler_args arg ) {
                 Chan->SetLastPutStatus(1);
         else
                 Chan->SetLastPutStatus(0);
-
 }
 
-void mcaMonitorEventHandler( struct event_handler_args arg ) {
-
+void mcaMonitorEventHandler( struct event_handler_args arg )
+{
 	// The channel object passed in by the ca_add_event call.
-	//
 	Channel *Chan = (Channel *) arg.usr;
 
 	// Load the Channel's cache.
-	//
 	Chan->LoadMonitorCache(arg);
 
 	// Count the number of outstanding events
-	//
 	Chan->IncrementEventCount();
 
 	// If a monitor string is installed, store the channel's
 	// handle in the queue for subsequent timer-initiated execution.
 	//
-	if (Chan->MonitorStringInstalled()) {
+	if (Chan->MonitorStringInstalled())
+    {
 		mutex.lock();
 		MonitorQueue.Enqueue(Chan->GetHandle());
 		mutex.unlock();
 	}
-
 }
 
-void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-
-	MCAError Err;
-
+// All the matlab calls end up in here.
+// This routine is ugly, one big switch for all the
+// 'mca(...)' calls, and most important there's no
+// enforcement of consistent code numbers in the
+// mca(..) calls and the switch in here....
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+{
 	int status = 0;
-	int commandswitch;
-
-	char PVName[PV_NAME_LENGTH_MAX + 1];
-
+	char PVName[PVNAME_SZ + 1];
 	const char* MCAInfoFields[] = { "Handle", "PVName", "ElementCount", "NativeType", "State", "MCAMessage", "Host" };
 
-	// If necessary, create and initialize the channel access service.
-	//
-	if (!CA.IsInitialized()) {
+	// Lazy initialization
+	if (CA == 0)
+    {
+        CA = new ChannelAccess();
 		mexAtExit(mca_cleanup);
 		mexLock();
-
-		// Err.Message(MCAError::MCAINFO, "Initializing MATLAB Channel Access...");
-
-		// Initialise Channel Access
-		//
-		CA.Initialize();
-
 	}
 
 	// Obtain the MCA command and then execute it.
-	//
-	commandswitch = (int) mxGetScalar(prhs[0]);
-
-	switch (commandswitch) {
-
+    int	commandswitch = (int) mxGetScalar(prhs[0]);
+	switch (commandswitch)
+    {
 	// MCAUNLOCK - unlocks the mex file so it can be cleared from memory with clear
-	//
 	case 0:
 		mexUnlock();
 		break;
 	
 	// MCAOPEN - open channels using strings of PV Names
-	//
 	case 1:
 	{
 		int Handle;
@@ -148,11 +134,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			// First argument of prhs is the command switch
 			//
-			mxGetString(prhs[i + 1], PVName, PV_NAME_LENGTH_MAX+1);
+			mxGetString(prhs[i + 1], PVName, PVNAME_SZ+1);
 			
 			// Create the Channel
 			//
-			Channel* Chan = new Channel(&CA);
+			Channel* Chan = new Channel(CA);
 			Handle = Chan->Connect(PVName);
 			if (Handle != 0) {
 
@@ -187,11 +173,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		for (int i = 0; i < L; i++) {
 
 			mxArray *mymxArray = mxGetCell(prhs[1], i);
-			mxGetString(mymxArray, PVName, PV_NAME_LENGTH_MAX+1);
+			mxGetString(mymxArray, PVName, PVNAME_SZ+1);
 
 			// Create the Channel
 			//
-			Channel* Chan = new Channel(&CA);
+			Channel* Chan = new Channel(CA);
 			Handle = Chan->Connect(PVName);
 			if (Handle != 0) {
 
@@ -268,7 +254,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan) {
 				myDblPr[i] = 0;
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 			}
 			else
 				myDblPr[i] = (((double)Chan->GetState()) == cs_conn) ? 1 : 0;
@@ -287,7 +273,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 		else {
 			ChannelTable.remove(Handle);
 			Chan->Disconnect();
@@ -359,7 +345,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			}
 		}
 		else {
-			Err.Message(MCAError::MCAWARN, "No connected PVs found.");
+			MCAError::Message(MCAError::MCAWARN, "No connected PVs found.");
 			plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
 			plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
 		}
@@ -377,7 +363,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 		else {
 			plhs[0] = mxCreateStructMatrix(1, 1, 7, MCAInfoFields);
 
@@ -483,7 +469,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
                         Channel *Chan = (Channel *)ChannelTable.find(Handle);
                         if (!Chan)
-                                Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+                                MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
                         myDblPr[i] = (double)(Chan->GetState() == 2);
 
@@ -515,7 +501,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			// Get the current value from Channel Access.
 			//
@@ -570,12 +556,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			int Handle = (int) myRDblPr[i];
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			if (Chan->IsNumeric())
 				Chan->GetValueFromCA();
 			else
-				Err.Message(MCAError::MCAERR, "MCAGET(51) can only be used for numeric PVs.");
+				MCAError::Message(MCAError::MCAERR, "MCAGET(51) can only be used for numeric PVs.");
 		}
 
 		// Now retrieve the values for each channel
@@ -602,7 +588,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			plhs[i] = mxCreateDoubleMatrix(1, 2, mxREAL);
 			double *myDblPr = mxGetPr(plhs[i]);
@@ -625,7 +611,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			plhs[i] = mxCreateDoubleMatrix(1, 2, mxREAL);
 			double *myDblPr = mxGetPr(plhs[i]);
@@ -662,7 +648,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			chtype RequestType = Chan->GetRequestType();
 			int Num = Chan->GetNumElements(); 
@@ -747,7 +733,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			//
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			if (Chan->IsNumeric()) {
 
@@ -760,7 +746,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                                 myDblPr[i] = status;
 			}
 			else
-				Err.Message(MCAError::MCAERR, "MCAPUT(80) can only be used for numeric PVs.");
+				MCAError::Message(MCAError::MCAERR, "MCAPUT(80) can only be used for numeric PVs.");
 
 		}
 		break;
@@ -777,7 +763,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 		// If a monitor event is installed, then just replace the monitor string.
 		//
@@ -806,7 +792,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 				}
 				else
-					Err.Message(MCAError::MCAERR, "Third argument to mcamon must be a string.");
+					MCAError::Message(MCAError::MCAERR, "Third argument to mcamon must be a string.");
 			}
 			plhs[0] = mxCreateScalarDouble(1);
 
@@ -836,7 +822,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 				}
 				else
-					Err.Message(MCAError::MCAERR, "Third argument to mcamon must be a string.");
+					MCAError::Message(MCAError::MCAERR, "Third argument to mcamon must be a string.");
 			}
 			else
 
@@ -865,7 +851,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 		Chan->ClearEvent();
 		
@@ -887,7 +873,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			//
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				Err.Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
 
 			Cache = Chan->GetMonitorCache();
 			if (Cache)
@@ -1016,81 +1002,40 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		break;
 	}
 
-	case 999:
-	{
+	case 999:     // MCAEXIT
 		mca_cleanup();
 		break;
-	}
 
-	// Print Timeout Settings.
-	//
-	case 1000:
-	{
-
-		plhs[0] = mxCreateDoubleMatrix(3, 1, mxREAL);
-
-		double SearchTimeOut = CA.GetSearchTimeout();
-		double GetTimeOut = CA.GetGetTimeout();
-		double PutTimeOut = CA.GetPutTimeout();
-
-		double *myDblPr = mxGetPr(plhs[0]);
-		myDblPr[0] = SearchTimeOut;
-		myDblPr[1] = GetTimeOut;
-		myDblPr[2] = PutTimeOut;
-
+	case 1001:    // Set MCA_SEARCH_TIMEOUT
+		CA->SetSearchTimeout(mxGetScalar(prhs[1]));
 		break;
-	}
 
-	// Set MCA_SEARCH_TIMEOUT
-	//
-	case 1001:
-	{
-		double TimeOut = mxGetScalar(prhs[1]);
-		CA.SetSearchTimeout(TimeOut);
+	case 1002:    // Set MCA_GET_TIMEOUT
+		CA->SetGetTimeout(mxGetScalar(prhs[1]));
 		break;
-	}
 
-	// Set MCA_GET_TIMEOUT
-	//
-	case 1002:
-	{
-		double TimeOut = mxGetScalar(prhs[1]);
-		CA.SetGetTimeout(TimeOut);
+	case 1003:    // Set MCA_PUT_TIMEOUT
+		CA->SetPutTimeout(mxGetScalar(prhs[1]));
 		break;
-	}
 
-	// Set MCA_PUT_TIMEOUT
-	//
-	case 1003:
-	{
-		double TimeOut = mxGetScalar(prhs[1]);
-		CA.SetPutTimeout(TimeOut);
-		break;
-	}
-
-	// Set default timeouts
-	//
-	case 1004:
-	{
-		CA.SetDefaultTimeouts();
-
-		plhs[0] = mxCreateDoubleMatrix(3, 1, mxREAL);
-
-		double SearchTimeOut = CA.GetSearchTimeout();
-		double GetTimeOut = CA.GetGetTimeout();
-		double PutTimeOut = CA.GetPutTimeout();
-
-		double *myDblPr = mxGetPr(plhs[0]);
-		myDblPr[0] = SearchTimeOut;
-		myDblPr[1] = GetTimeOut;
-		myDblPr[2] = PutTimeOut;
-
-		break;
-	}
+    case 1004:	// Set default timeouts
+		CA->SetDefaultTimeouts();
+        // FALL THROUGH to return the settings
+    case 1000:    // Get all Timeout Settings.
+    {
+        plhs[0] = mxCreateDoubleMatrix(3, 1, mxREAL);
+        double *myDblPr = mxGetPr(plhs[0]);
+        myDblPr[0] = CA->GetSearchTimeout();
+        myDblPr[1] = CA->GetGetTimeout();
+        myDblPr[2] = CA->GetPutTimeout();
+        break;
+    }
 
 	default:
-		Err.Message(MCAError::MCAERR, "mca called with an invalid command switch.");
-
-	}  // switch (commandswitch)
-
+    {
+        char message[100];
+        sprintf(message, "Invalid mca code %d", commandswitch);
+		MCAError::Message(MCAError::MCAERR, message);
+    }
+	}  // switch (command)
 }

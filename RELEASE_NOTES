@@ -1,5 +1,16 @@
 Matlab Channel Access (MCA)
 
+* V 4 - Kay Kasemir, Sept 2006
+Some cleanup on the way to understanding the code
+in order to fix the "No channel exists for this handle."
+error:
+- Arranged files in directories
+- ChannelAccess.cpp replaced by inlines,
+  no more IsInitialized() checks needed
+  because that's automatic
+- Use PVNAME_SZ from base instead of yet another #define
+- Added tests
+
 * V 3.2 - Kay Kasemir, June 30 2006
 steven.banks@synchrotron.vic.gov.au emailed a snapshot
 of MCA as used at the Australian Synchroton Project.

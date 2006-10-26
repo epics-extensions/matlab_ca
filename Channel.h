@@ -101,7 +101,6 @@ private:
 
 	static int NextHandle;
 	const ChannelAccess* CA;
-
 };
 
 #endif // channel_h

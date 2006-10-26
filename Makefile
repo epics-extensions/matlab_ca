@@ -53,8 +53,8 @@ FLAGS += -L$(EPICS_BASE)/lib/$(EPICS_HOST_ARCH) -ldbStaticHost -lCom -lca
 $(OUT):
 	mkdir $(OUT)
 
-$(OUT)/mca.mexglx: mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp
-	$(MEX) $(FLAGS) mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp -o $(OUT)/mca.$(MEXOUT)
+$(OUT)/mca.mexglx: mca.cpp MCAError.cpp Channel.cpp
+	$(MEX) $(FLAGS) mca.cpp MCAError.cpp Channel.cpp -o $(OUT)/mca.$(MEXOUT)
 
 install: matlab
 	cp O.$(EPICS_HOST_ARCH)/mca.$(MEXOUT) $(EPICS_EXTENSIONS)/lib/$(EPICS_HOST_ARCH)
