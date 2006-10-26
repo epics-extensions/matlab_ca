@@ -26,7 +26,7 @@ using namespace std;
 #include "MCAError.h"
 
 static ChannelAccess *CA = 0;
-static IntHash ChannelTable;
+static IntHash<Channel> ChannelTable;
 
 static epicsMutex mutex;
 static Queue<int> MonitorQueue;
@@ -51,20 +51,19 @@ static int addChannel(const char *name)
 
 void mca_cleanup()
 {
-	int HandlesUsed = ChannelTable.size();
-	IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
+	IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
 
 	// Delete all the channels from the Channel Table
-	Channel *Chan = (Channel *)ChannelIterator.first();
-	for (int i = 0; i < HandlesUsed; i++)
+	Channel *Chan;
+    while ((Chan = iter.next()) != 0)
     {
 		int Handle = Chan->GetHandle();
+        if (Handle != iter.getKey())
+            MCAError::Warn("mca_cleanup inconsitency: key %d vs. handle %d\n",
+                           iter.getKey(), Handle);
 		ChannelTable.remove(Handle);
 		Chan->ClearEvent();
 		delete Chan;
-
-		// Get the next channel in the Table.
-		Chan = (Channel *)ChannelIterator++;
 	}
 
 	// Empty the Monitor Command Queue
@@ -211,20 +210,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		plhs[1] = mxCreateCellArray(1, &HandlesUsed);
 
 		// Create an iterator for the Channel Table and get the first element.
-		IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
-		Channel* Chan = (Channel *)ChannelIterator.first();
-
-		// Retrieve each element in the Channel Table and add its
-		// info into the array.
-		for (int i = 0; i < HandlesUsed; i++)
+		IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
+		Channel* Chan;
+        int i = 0;
+        while ((Chan = iter.next()) != 0)
         {
             int Handle = Chan->GetHandle();
+            if (Handle != iter.getKey())
+                MCAError::Warn("mcaclose inconsitency: Handle %d vs. key %d\n",
+                                Handle, iter.getKey());
 		    myDblPr[i] = Handle;
 			mxArray *mymxArray = mxCreateString(Chan->GetPVName());
 			mxSetCell(plhs[1], i, mymxArray);
-
-			// Get the next channel
-			Chan = (Channel *)ChannelIterator++;
+            ++i;
 		}
 		break;
 	}
@@ -237,7 +235,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
 			// (First argument of prhs is the command switch)
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
             {
 				myDblPr[i] = 0;
@@ -255,7 +253,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
         	int Handle = (int) mxGetScalar(prhs[i + 1]);
     		// Retrieve the Channel from the Channel Table.
-    		Channel *Chan = (Channel *)ChannelTable.find(Handle);
+    		Channel *Chan = ChannelTable.find(Handle);
     		if (!Chan)
     			MCAError::Error("mcaclose(%d): Invalid handle.", Handle);
     		else 
@@ -280,15 +278,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             plhs[1] = mxCreateStructMatrix(1, HandlesUsed, 7, MCAInfoFields);
 
 			// Create an iterator for the Channel Table and get the first element.
-			IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
-			Channel* Chan = (Channel *)ChannelIterator.first();
-			// Retrieve each element in the Channel Table and add its
-			// info into the array.
-			for (int i = 0; i < HandlesUsed; i++)
+			IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
+			Channel* Chan;
+            int i = 0;
+            while ((Chan = iter.next()) != 0)
             {
                 getChannelInfo(Chan, plhs[1], i);
 				handles[i] = Chan->GetHandle();
-				Chan = (Channel *)ChannelIterator++;
+                ++i;
 			}
 		}
 		else
@@ -304,7 +301,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	case 11:
 	{
 		int Handle = (int) mxGetScalar(prhs[1]);
-		Channel *Chan = (Channel *)ChannelTable.find(Handle);
+		Channel *Chan = ChannelTable.find(Handle);
 		if (!Chan)
             MCAError::Error("mcainfo(%d): Invalid handle.", Handle);
 		else
@@ -320,47 +317,38 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         //
         case 12:
         {
-
                 int HandlesUsed = ChannelTable.size();
 
                 // Matrix of handles of connected PVs
-                //
                 plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
                 double *myDblPr0 = mxGetPr(plhs[0]);
 
                 // Matrix of states of connected PVs
-                //
                 plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
                 double *myDblPr1 = mxGetPr(plhs[1]);
 
                 // Loop through all the open channels
-                //
-                if (nrhs == 1) {
-
-                        if (HandlesUsed > 0) {
-
-                                // Create an iterator for the Channel Table and get the first element.
-                                //
-                                IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);
-                                Channel* Chan = (Channel *)ChannelIterator.first();
-
-                                //
-                                for (int i = 0; i < HandlesUsed; i++) {
-
-                                        myDblPr0[i] = (double)(Chan->GetHandle());
-                                        myDblPr1[i] = (double)(Chan->GetState() == 2);
-
-                                        // Get the next channel in the Table.
-                                        //
-                                        Chan = (Channel *)ChannelIterator++;
-
-                                }
+                if (nrhs == 1)
+                {
+                    if (HandlesUsed > 0)
+                    {
+                        IntHashIterator<Channel> iter = 
+                            IntHashIterator<Channel>(ChannelTable);
+                        int i = 0;
+                        Channel* Chan;
+                        while ((Chan = iter.next()) != 0)
+                        {
+                            myDblPr0[i] = (double)(Chan->GetHandle());
+                            myDblPr1[i] = (double)(Chan->GetState() == 2);
+                            ++i;
                         }
-                        else {
-                                mexWarnMsgTxt("No connected PVs found");
-                                plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
-                                plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
-                        }
+                    }
+                    else
+                    {
+                        mexWarnMsgTxt("No connected PVs found");
+                        plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
+                        plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
+                    }
                 }
 
                 break;
@@ -379,7 +367,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             for (int i = 0; i < HandlesUsed; i++)
             {
                     int Handle = (int) mxGetScalar(prhs[i + 1]);
-                    Channel *Chan = (Channel *)ChannelTable.find(Handle);
+                    Channel *Chan = ChannelTable.find(Handle);
                     if (!Chan)
                         MCAError::Error("mcastate(%): Invalid handle.", Handle);
 
@@ -409,7 +397,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			// (First argument of prhs is the command switch)
 			//
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
 				MCAError::Error("mcaget(%d): Invalid handle.", Handle);
 
@@ -464,7 +452,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		for (int i = 0; i < NumHandles; i++) {
 
 			int Handle = (int) myRDblPr[i];
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcaget(%d): Invalid handle.", Handle);
 
@@ -478,7 +466,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		//
 		for (int j = 0; j < NumHandles; j++) {
 			int Handle = (int) myRDblPr[j];
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			myLDblPr[j] = (double)Chan->GetNumericValue(0);
 		}
 
@@ -496,7 +484,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			// (First argument of prhs is the command switch)
 			//
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcatime(%d): Invalid handle.", Handle);
 
@@ -519,7 +507,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			// (First argument of prhs is the command switch)
 			//
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcaalarm(%d): Invalid handle.", Handle);
 
@@ -556,7 +544,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			//
 			int Handle = (int) mxGetScalar(prhs[1 + i * 2]);
 
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcaput(%d): Invalid handle.", Handle);
 
@@ -614,7 +602,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		for (i = 0; i < NumHandles; i++)
                 {
                         int Handle = (int) mxGetScalar(prhs[1 + i * 2]);
-                        Channel *Chan = (Channel *)ChannelTable.find(Handle);
+                        Channel *Chan = ChannelTable.find(Handle);
                         myDblPr[i] = Chan->GetLastPutStatus();
 
 			// Before use of PutValueToCACallback:
@@ -641,7 +629,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 			// Find the channel with the specified handle
 			//
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcaput(%d): Invalid handle.", Handle);
 
@@ -671,7 +659,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	
 		// Find the channel with the specified handle
 		//
-		Channel *Chan = (Channel *)ChannelTable.find(Handle);
+		Channel *Chan = ChannelTable.find(Handle);
 		if (!Chan)
              MCAError::Error("mcamon(%d): Invalid handle.", Handle);
 
@@ -759,7 +747,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	
 		// Find the channel with the specified handle
 		//
-		Channel *Chan = (Channel *)ChannelTable.find(Handle);
+		Channel *Chan = ChannelTable.find(Handle);
 		if (!Chan)
             MCAError::Error("mcaclearmon(%d): Invalid handle.", Handle);
 
@@ -781,7 +769,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			
 			// Find the channel with the specified handle
 			//
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
+			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcacache(%d): Invalid handle.", Handle);
 
@@ -817,36 +805,28 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		// Iterate through all the defined channels and add their
 		// handles into the array if they have monitors defined.
 		//
-		IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
-		Chan = (Channel *) ChannelIterator.first();
-		for (i = 0; i < HandlesUsed; i++) {
-		
+		IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);
+        while ((Chan = iter.next()) != 0)
+        {
 			if (Chan->EventInstalled())
 				HandleArray[MonitorsInstalled++] = Chan->GetHandle();
-
-			Chan = (Channel *) ChannelIterator++;
-			
 		}
 
-		if (MonitorsInstalled > 0) {
-
+		if (MonitorsInstalled > 0)
+        {
 			// An array of the handles of channels with installed monitors.
-			//
 			plhs[0] = mxCreateDoubleMatrix(1, MonitorsInstalled, mxREAL);
 			myDblPr = mxGetPr(plhs[0]);
 
 			// An array of the monitor strings for each installed monitor.
-			//
 			plhs[1] = mxCreateCellMatrix(1, MonitorsInstalled);
 
 			// Fill up the arrays.
-			//
-			for (i = 0; i < MonitorsInstalled; i++) {
-
-				Chan = (Channel *)ChannelTable.find(HandleArray[i]);
+			for (i = 0; i < MonitorsInstalled; i++)
+            {
+				Chan = ChannelTable.find(HandleArray[i]);
 				myDblPr[i] = (double) HandleArray[i];
 				mxSetCell(plhs[1], i, mxCreateString(Chan->GetMonitorString()));
-
 			}
 		}
 		else {
@@ -872,15 +852,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
 		myDblPr1 = mxGetPr(plhs[1]);
 
-		IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
-		Channel *Chan = (Channel *) ChannelIterator.first();
-		for (int i = 0; i < HandlesUsed; i++) {
-
+		IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
+		Channel *Chan;
+        int i = 0;
+        while ((Chan = iter.next()) != 0)
+        {
 			myDblPr0[i] = Chan->GetHandle();
 			myDblPr1[i] = Chan->GetEventCount();
-			Chan = (Channel *) ChannelIterator++;
+            ++i;
 		}
-
 		break;
 	}
 
@@ -890,18 +870,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	case 600:
 	{
 		mutex.lock();
-		while(!MonitorQueue.IsEmpty()) {
-			
+		while(!MonitorQueue.IsEmpty())
+        {
 			int Handle = MonitorQueue.Dequeue();
 			mutex.unlock();
-	
 			// Find the channel.  If it still exists, execute its 
 			// command string (if it has one.)
-			//
-			Channel *Chan = (Channel *)ChannelTable.find(Handle);
-			if (Chan) {
-
-				if (Chan->MonitorStringInstalled()) {
+			Channel *Chan = ChannelTable.find(Handle);
+			if (Chan)
+            {
+				if (Chan->MonitorStringInstalled())
+                {
 					const char* MonitorString = Chan->GetMonitorString();
 					mexEvalString(MonitorString);
 				}
