@@ -4,6 +4,7 @@
 
 #EPICS_BASE = /Users/kasemir/epics/R3.14.8.2/base
 #EPICS_EXTENSIONS = /Users/kasemir/epics/R3.14.8.2/extensions
+#MEX=/Applications/MATLAB72/bin/mex
 
 ifeq ($(EPICS_HOST_ARCH),darwin-ppc)
 OS_CLASS = Darwin
@@ -13,6 +14,10 @@ endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86)
 OS_CLASS = Linux
 MEXOUT = mexglx
+endif
+
+ifndef MEX
+MEX=mex
 endif
 
 ifndef MEXOUT
@@ -49,9 +54,9 @@ $(OUT):
 	mkdir $(OUT)
 
 $(OUT)/mca.mexglx: mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp
-	mex $(FLAGS) mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp -o $(OUT)/mca.$(MEXOUT)
+	$(MEX) $(FLAGS) mca.cpp MCAError.cpp Channel.cpp ChannelAccess.cpp -o $(OUT)/mca.$(MEXOUT)
 
-install:
+install: matlab
 	cp O.$(EPICS_HOST_ARCH)/mca.$(MEXOUT) $(EPICS_EXTENSIONS)/lib/$(EPICS_HOST_ARCH)
 
 clean:
