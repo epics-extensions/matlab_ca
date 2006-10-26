@@ -9,6 +9,7 @@ error:
   no more IsInitialized() checks needed
   because that's automatic
 - Use PVNAME_SZ from base instead of yet another #define
+- Changed PV hash to template
 - Added tests
 
 * V 3.2 - Kay Kasemir, June 30 2006

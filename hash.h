@@ -3,45 +3,132 @@
 
 #include <string.h>
 
+/** One node in a hash, mapping integer keys to 'T' pointers. */ 
+template<class T>
 class IntHashNode
 {
-friend class IntHash;
-friend class IntHashIterator;
+public:
+    IntHashNode(int key, T *value, IntHashNode *next)
+      : key(key), value(value), next(next)
+    {}
+    
+    int getKey() const
+    {   return key; }
 
+    T *getValue() const
+    {   return value; }
+    
+    void setValue(T *value)
+    {   this->value = value; }
+    
+    IntHashNode *getNext() const
+    {   return next; }
+
+    void setNext(IntHashNode *next)
+    {   this->next = next; }
+    
 private:
-	int           hashInt;
-	void        * hashData;
-	IntHashNode * next;
-
-	IntHashNode  ( int HashInt, void * HashData);
-	~IntHashNode ( void );
+	int            key;
+	T              *value;
+	IntHashNode<T> *next;
 };
 
-
+/** Hash, mapping integer keys to 'T' pointers. */ 
+template<class T>
 class IntHash
 {
-friend class IntHashIterator;
-
-private:
-	enum { HASH_CNT=256, HASH_NO=256 };
-
-	IntHashNode * nodes[HASH_CNT];
-
-	int Elements;
-
 public:
-	IntHash  ( void );
-	~IntHash ( void );
+    IntHash  ( void )
+        : Elements(0)
+    {
+        memset(nodes, 0, sizeof(nodes));
+    }
 
-	inline unsigned char hash ( int hashInt );
+    ~IntHash ( void )
+    {
+        for (int i=0; i<HASH_CNT; i++)
+        {
+            IntHashNode<T> *node = nodes[i];
+            while (node)
+            {
+                IntHashNode<T> *tmp = node->getNext();
+                delete node;
+                node = tmp;
+            }
+        }
+    }
 
-	inline void insert ( int hashInt, void * hashData );
-	inline void remove ( int hashInt );
-	inline void * find ( int hashInt );
-	inline int size ( void );
+    void insert(int key, T *value)
+    {
+        unsigned char idx = hash(key);
+        IntHashNode<T> *node = nodes[idx];
+        
+        while (node)
+        {
+            if (node->getKey() == key)
+            {   // Found, update value
+                node->setValue(value);
+                return;
+            }
+            node = node->getNext();
+        }
+        // Not found, add to front
+        nodes[idx] = new IntHashNode<T>(key, value, nodes[idx]);
+        Elements++;
+    }
+
+    void remove (int key)
+    {
+        unsigned char idx = hash(key);
+        IntHashNode<T> *prev = 0, *node = nodes[idx];
+        
+        while (node)
+        {
+            if (node->getKey() == key)
+            {   // Unlink 'node' and delete
+                if (prev)
+                    prev->setNext(node->getNext());
+                else           
+                    nodes[idx] = node->getNext();
+                delete node;
+                Elements--;
+                return;
+            }
+            prev = node;
+            node = node->getNext();
+        }
+    }
+
+    T *find (int key)
+    {
+        unsigned char idx = hash(key);
+        IntHashNode<T> *node = nodes[idx];
+        while (node)
+        {
+            if (node->getKey() == key)
+                return node->getValue();
+            node = node->getNext();
+        }
+        return 0;
+    }
+
+    int size ()
+    {   return Elements; }
+    
+private:
+    enum { HASH_CNT=256 };
+
+    int hash (int key)
+    {
+        return (key % HASH_CNT);
+    }
+
+    IntHashNode<T> *nodes[HASH_CNT];
+
+    int Elements;
 };
 
-
+#if 0
 class IntHashIterator
 {
 private:
@@ -59,103 +146,6 @@ public:
 	inline int    key         ( void );
 	inline void * data        ( void );
 };
-
-
-
-inline IntHashNode::IntHashNode ( int HashInt, void * HashData )
-	: next(NULL)
-	{
-	hashInt = HashInt;
-    hashData  = HashData;
-	}
-
-
-inline IntHashNode::~IntHashNode ( void )
-	{
-        }
-
-
-inline IntHash::IntHash  ( void )
-	{
-	memset(nodes, 0, sizeof(nodes));
-	Elements = 0;
-	}
-
-
-inline IntHash::~IntHash ( void )
-	{
-	for(int i=0; i<HASH_CNT; i++)
-		{
-		while(nodes[i]!=NULL)
-			{
-			IntHashNode * node = nodes[i];
-			nodes[i] = node->next;
-			delete node;
-            }
-		}
-	}
-
-inline unsigned char IntHash::hash ( int hashInt )
-	{
-	return (hashInt%HASH_NO);
-	}
-
-inline void IntHash::insert (int hashInt, void * hashData )
-	{
-	unsigned char idx = hash(hashInt);
-	IntHashNode * prev    = NULL, * node = nodes[idx];
-	IntHashNode * newNode = new IntHashNode(hashInt, hashData);
-
-	while(node!=NULL && node->hashInt!=hashInt)
-		{
-		prev = node;
-		node = prev->next;
-		}
-	if(node!=NULL)
-		{
-		newNode->next = node->next;
-		delete node;
-		Elements--;
-		}
-	if(prev!=NULL) prev->next = newNode;
-	else           nodes[idx] = newNode;
-	Elements++;
-	}
-
-inline void IntHash::remove ( int hashInt )
-	{
-	unsigned char idx = hash(hashInt);
-	IntHashNode * prev = NULL, * node = nodes[idx];
-	while(node!=NULL && node->hashInt!=hashInt)
-		{
-		prev = node;
-		node = prev->next;
-		}
-	if(node!=NULL)
-		{
-		if(prev!=NULL) prev->next = node->next;
-		else           nodes[idx] = node->next;
-		delete node;
-		Elements--;
-		}
-	}
-
-inline void * IntHash::find ( int hashInt )
-	{
-	unsigned char idx = hash(hashInt);
-	IntHashNode * prev = NULL, * node = nodes[idx];
-	while(node!=NULL && node->hashInt!=hashInt)
-		{
-		prev = node;
-		node = prev->next;
-		}
-	return node!=NULL?node->hashData:NULL;
-	}
-
-inline int IntHash::size ( void )
-	{
-	return Elements;
-	}
 
 inline IntHashIterator::IntHashIterator(IntHash * HashTbl)
 	: hashTbl(HashTbl), idx(0), node(NULL)
@@ -224,6 +214,7 @@ inline void * IntHashIterator::data ( void )
 	{
 	return (node!=NULL)?node->hashData:NULL;
 	}
-	
+
+#endif
 
 #endif /* _INT_HASH_H_ */
