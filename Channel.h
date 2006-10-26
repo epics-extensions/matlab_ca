@@ -6,31 +6,38 @@
 
 class ChannelAccess;
 
-class Channel {
-
+class Channel
+{
 public:
+	Channel(const ChannelAccess *CA, const char *Name);
 
-	// Constructors
-	Channel( void );
-	Channel( const ChannelAccess* );
+	virtual ~Channel();
 
-	// Destructor
-	virtual ~Channel( void );
+	bool IsConnected() const
+    {   return Connected;  }
+    
+	void Disconnect();
 
-	int Connect( char* );
-	void AllocChanMem( void );
-	bool IsConnected( void ) const;
-	void Disconnect( void );
+	int GetHandle() const
+    {   return (Handle); }
+    
+	chid GetChannelID() const;
+    
+	char* GetPVName() const
+    {   return PVName; }
 
-	int GetHandle( void ) const;
-	chid GetChannelID( void ) const;
-	char* GetPVName( void ) const;
-	char* GetHostName( void ) const;
-	int GetState ( void ) const;
-	int GetNumElements ( void ) const;
-	chtype GetRequestType( void ) const;
-	const char* GetRequestTypeStr( void ) const;
-	bool IsNumeric( void ) const;
+	char* GetHostName() const
+    {
+        if (HostName)
+            return HostName;
+        return "<unknown>";
+    }
+    
+	int GetState () const;
+	int GetNumElements () const;
+	chtype GetRequestType() const;
+	const char* GetRequestTypeStr() const;
+	bool IsNumeric() const;
 
 	// These methods must be used in combination:
 	//
@@ -39,12 +46,12 @@ public:
 	// 3) GetStringValue - use if IsNumeric() returns False
 	// 4) GetTimeStamp - returns the Epics time stamp of value obtained from CA
 	//
-	void GetValueFromCA( void );
+	void GetValueFromCA();
 	double GetNumericValue( int ) const;
 	const char* GetStringValue ( int ) const;
-	epicsTimeStamp GetTimeStamp( void ) const;
-	dbr_short_t	GetAlarmStatus( void ) const;
-	dbr_short_t	GetAlarmSeverity( void ) const;
+	epicsTimeStamp GetTimeStamp() const;
+	dbr_short_t	GetAlarmStatus() const;
+	dbr_short_t	GetAlarmSeverity() const;
 
 	// These methods must be used in combination:
 	//
@@ -59,48 +66,61 @@ public:
 	void PutValueToCACallback ( int, caEventCallBackFunc * );
 	int PutValueToCA ( int ) const;
 	void SetLastPutStatus ( double );
-	double GetLastPutStatus( void ) const;
+	double GetLastPutStatus() const;
 
 	void SetMonitorString( const char*, int );
-	bool MonitorStringInstalled( void ) const;
-	const char* GetMonitorString( void ) const;
-	void ClearMonitorString( void );
+	bool MonitorStringInstalled() const;
+	const char* GetMonitorString() const;
+	void ClearMonitorString();
 	void LoadMonitorCache( struct event_handler_args arg );
 	int AddEvent( caEventCallBackFunc * );
-	bool EventInstalled( void ) const;
-	void ClearEvent( void );
+	bool EventInstalled() const;
+	void ClearEvent();
 
-	int GetEventCount( void ) const;
-	void IncrementEventCount( void );
-	void ResetEventCount( void );
+	
+    int GetEventCount() const
+    {  return EventCount; }
 
-	const mxArray *GetMonitorCache( void ) const;
+    void IncrementEventCount()
+    {  EventCount++; }
+
+    void ResetEventCount()
+    {  EventCount = 0; }
+
+    
+
+	const mxArray *GetMonitorCache() const;
 
 private:
+    Channel(); // don't use
+    
+    void AllocChanMem();
+    
 
-	int Handle;					// MCA channel handle.
+    static int NextHandle;
+
+    const ChannelAccess* CA;
+    int Handle;                 // MCA channel handle.
+    char* PVName;               // The name of the Process Variable
 	chid ChannelID;				// CA channel identifier.
 	evid EventID;				// CA evnet identifier.  If a channel is not
-								// monitored then EventID == NULL.
+                                // monitored then EventID == NULL.
+    bool Connected;
+
 	char* MonitorCBString;		// Pointer to the MCA callback string for monitor
-	char* PVName;				// The name of the Process Variable
 	char* HostName;				// The name of the host name where the PV connected
+    union db_access_val* DataBuffer;
 	epicsTimeStamp TimeStamp;	// The time stamp of the most recent data
 	dbr_short_t	AlarmStatus;	// The alarm status of the most recent data
 	dbr_short_t	AlarmSeverity;	// The alarm severity of the most recent data
 
-	bool Connected;
 	int NumElements;
 	chtype RequestType;
 
 	double LastPutStatus;
 
-	union db_access_val* DataBuffer;
 	mxArray* Cache;
 	int EventCount;
-
-	static int NextHandle;
-	const ChannelAccess* CA;
 };
 
 #endif // channel_h

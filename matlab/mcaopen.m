@@ -21,15 +21,13 @@ function varargout = mcaopen(varargin);
 %
 %   See also: MCACLOSE
 
-
-
 if nargin>1 & ne(nargin,nargout)
     error('Number of outputs must match the number of inputs')
 end
 
 if nargin==0
     [varargout{1} varargout{2}] = mca(3); 
-elseif  iscellstr(varargin) 
+elseif iscellstr(varargin) 
     [varargout{1:nargin}] = mca(1,varargin{:}); 
 elseif nargin==1 & iscell(varargin{1})
     varargout{1} = mca(2,varargin{1});

@@ -13,18 +13,18 @@ public:
 	// Constructor creates CA context
 	ChannelAccess()
     {
-        MCAError::Message(MCAError::MCAINFO, "MCA Initialized");
+        mexPrintf("MCA Initialized\n");
         SetDefaultTimeouts();
         int status = ca_context_create(ca_enable_preemptive_callback);
         if (status != ECA_NORMAL)
-            MCAError::Message(MCAError::MCAERR, ca_message(status));
+            MCAError::Error("context_create: %s\n", ca_message(status));
     }
 
     // Destructor destroys CA context
     virtual ~ChannelAccess()
     {
         ca_context_destroy();
-        MCAError::Message(MCAError::MCAINFO, "MCA Finalized");
+        mexPrintf("MCA Finalized\n");
     }
 
 	void SetDefaultTimeouts()

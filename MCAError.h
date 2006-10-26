@@ -1,11 +1,11 @@
 #ifndef mcaerror_h
 #define mcaerror_h
 
-class MCAError  
+class MCAError
 {
 public:
-    enum Level { MCAINFO, MCAWARN, MCAERR };
-    static void Message(Level level, const char *msg);
+    static void Warn(const char *format, ...);
+    static void Error(const char *format, ...);
 };
 
 #endif // mcaerror_h

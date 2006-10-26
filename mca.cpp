@@ -31,6 +31,24 @@ static IntHash ChannelTable;
 static epicsMutex mutex;
 static Queue<int> MonitorQueue;
 
+
+static int addChannel(const char *name)
+{
+    if (CA == 0)
+    {
+        MCAError::Error("addChannel(%s) called without CA", name);
+        return 0;
+    }
+    Channel* Chan = new Channel(CA, name);
+    int Handle = Chan->GetHandle();
+    if (Handle != 0)
+    {
+        // Add the channel into the collection of channels
+        ChannelTable.insert(Handle, Chan);
+    }
+    return Handle;
+}
+
 void mca_cleanup()
 {
 	int HandlesUsed = ChannelTable.size();
@@ -118,124 +136,64 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     int	commandswitch = (int) mxGetScalar(prhs[0]);
 	switch (commandswitch)
     {
-	// MCAUNLOCK - unlocks the mex file so it can be cleared from memory with clear
-	case 0:
+	case 0:    // MCAUNLOCK - unlocks the mex file so it can be cleared from memory with clear
 		mexUnlock();
 		break;
 	
-	// MCAOPEN - open channels using strings of PV Names
-	case 1:
-	{
-		int Handle;
-
-		// Loop through all the supplied PV Names
-		//
-		for (int i = 0; i < nrhs - 1; i++) {
-
+	case 1:    // MCAOPEN - open channels using strings of PV Names
+	{	// Loop through all the supplied PV Names
+		for (int i = 0; i < nrhs - 1; i++)
+        {
 			// First argument of prhs is the command switch
-			//
 			mxGetString(prhs[i + 1], PVName, PVNAME_SZ+1);
-			
-			// Create the Channel
-			//
-			Channel* Chan = new Channel(CA);
-			Handle = Chan->Connect(PVName);
-			if (Handle != 0) {
-
-				// Add the channel into the collection of channels
-				//
-				ChannelTable.insert(Handle, Chan);
-
-				// Return the Handle to MatLab
-				//
-				plhs[i] = mxCreateScalarDouble(Handle);
-			}
-			else
-				plhs[i] = mxCreateScalarDouble(0);
+			plhs[i] = mxCreateScalarDouble(addChannel(PVName));
 		}
 		break;
 	}
-
-	// MCAOPEN - open channels using a cell array of PV Names
-	//
-	case 2:
-	{
-		int Handle;
-
-		// Determine how big the output cell array needs to be and then create it
-		//
+    
+	case 2:    // MCAOPEN - open channels using a cell array of PV Names
+	{	// Determine how big the output cell array needs to be and then create it
 		int L = mxGetM(prhs[1]) * mxGetN(prhs[1]);
 		plhs[0] = mxCreateDoubleMatrix(1, L, mxREAL);
 		double *myDblPr = mxGetPr(plhs[0]);
 
 		// Loop through all the supplied PV Names in the cell array
-		//
-		for (int i = 0; i < L; i++) {
-
+		for (int i = 0; i < L; i++)
+        {
 			mxArray *mymxArray = mxGetCell(prhs[1], i);
 			mxGetString(mymxArray, PVName, PVNAME_SZ+1);
-
-			// Create the Channel
-			//
-			Channel* Chan = new Channel(CA);
-			Handle = Chan->Connect(PVName);
-			if (Handle != 0) {
-
-				// Add the channel into the collection of channels
-				//
-				ChannelTable.insert(Handle, Chan);
-				
-				myDblPr[i] = Handle;
-
-			}
-			else {
-
-				myDblPr[i] = 0;
-
-			}
+			myDblPr[i] = addChannel(PVName);
 		}
 		break;
 	}
 	
-	// MCAOPEN - Returns two lists:
-	//				a) A double matrix of handles of connected PVs
-	//				b) a cell array of correcponding PV names.
-	//
-	case 3:
+	case 3:    // MCAOPEN - Returns two lists:
+               //              a) A double matrix of handles of connected PVs
+               //              b) a cell array of correcponding PV names.
 	{
-		int Handle;
 		int HandlesUsed = ChannelTable.size();
-
 		// Matrix of handles of connected PVs
-		//
 		plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
 		double *myDblPr = mxGetPr(plhs[0]);
-
 		// Cell array of PV Names
-		//
 		plhs[1] = mxCreateCellArray(1, &HandlesUsed);
 
 		// Create an iterator for the Channel Table and get the first element.
-		//
 		IntHashIterator ChannelIterator = IntHashIterator(&ChannelTable);	
 		Channel* Chan = (Channel *)ChannelIterator.first();
 
 		// Retrieve each element in the Channel Table and add its
 		// info into the array.
-		//
-		for (int i = 0; i < HandlesUsed; i++) {
-
-			Handle = Chan->GetHandle();
-			myDblPr[i] = Handle;
+		for (int i = 0; i < HandlesUsed; i++)
+        {
+            int Handle = Chan->GetHandle();
+		    myDblPr[i] = Handle;
 			mxArray *mymxArray = mxCreateString(Chan->GetPVName());
 			mxSetCell(plhs[1], i, mymxArray);
 
 			// Get the next channel
-			//
 			Chan = (Channel *)ChannelIterator++;
-
 		}
-
 		break;
 	}
 
@@ -254,7 +212,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan) {
 				myDblPr[i] = 0;
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Error("mcacheck(%d): Invalid handle.", Handle);
 			}
 			else
 				myDblPr[i] = (((double)Chan->GetState()) == cs_conn) ? 1 : 0;
@@ -262,24 +220,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCACLOSE - Close channels using an array of handles
+	// MCACLOSE - Close one channel
 	//
 	case 5:
 	{
-
-		int Handle = (int) mxGetScalar(prhs[1]);
-
-		// Retrieve the Channel from the Channel Table.
-		//
-		Channel *Chan = (Channel *)ChannelTable.find(Handle);
-		if (!Chan)
-			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
-		else {
-			ChannelTable.remove(Handle);
-			Chan->Disconnect();
-			delete Chan;
-			Chan = NULL;
-		}
+        for (int i = 0; i < nrhs - 1; i++)
+        {
+        	int Handle = (int) mxGetScalar(prhs[i + 1]);
+    		// Retrieve the Channel from the Channel Table.
+    		Channel *Chan = (Channel *)ChannelTable.find(Handle);
+    		if (!Chan)
+    			MCAError::Error("mcaclose(%d): Invalid handle.", Handle);
+    		else 
+            {
+    			ChannelTable.remove(Handle);
+    			Chan->Disconnect();
+    			delete Chan;
+    		}
+        }
 		break;
 	}
 
@@ -345,7 +303,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			}
 		}
 		else {
-			MCAError::Message(MCAError::MCAWARN, "No connected PVs found.");
+			MCAError::Warn("mcainfo: No connected PVs found.");
 			plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
 			plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
 		}
@@ -363,7 +321,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+            MCAError::Error("mcainfo(%d): Invalid handle.", Handle);
 		else {
 			plhs[0] = mxCreateStructMatrix(1, 1, 7, MCAInfoFields);
 
@@ -449,33 +407,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
         // MCASTATE - return an array of status for specified channels
         //            (1 - OK, 0 - disconnected or cleared)
-        //
         case 13:
         {
+            int HandlesUsed = nrhs - 1;
 
-                int HandlesUsed = nrhs - 1;
-
-                // Matrix of states of connected PVs
-                //
-                plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+            // Matrix of states of connected PVs
+            plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
             double *myDblPr = mxGetPr(plhs[0]);
+            // Only loop through the supplied channels
+            for (int i = 0; i < HandlesUsed; i++)
+            {
+                    int Handle = (int) mxGetScalar(prhs[i + 1]);
+                    Channel *Chan = (Channel *)ChannelTable.find(Handle);
+                    if (!Chan)
+                        MCAError::Error("mcastate(%): Invalid handle.", Handle);
 
-                // Only loop through the supplied channels
-                //
-                for (int i = 0; i < HandlesUsed; i++) {
-
-                        int Handle = (int) mxGetScalar(prhs[i + 1]);
-
-
-                        Channel *Chan = (Channel *)ChannelTable.find(Handle);
-                        if (!Chan)
-                                MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
-
-                        myDblPr[i] = (double)(Chan->GetState() == 2);
-
-                }
-
-                break;
+                    myDblPr[i] = (double)(Chan->GetState() == 2);
+            }
+            break;
         }
 
 	// MCAPOLL - Poll Channel Access
@@ -501,7 +450,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+				MCAError::Error("mcaget(%d): Invalid handle.", Handle);
 
 			// Get the current value from Channel Access.
 			//
@@ -556,12 +505,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			int Handle = (int) myRDblPr[i];
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+                MCAError::Error("mcaget(%d): Invalid handle.", Handle);
 
 			if (Chan->IsNumeric())
 				Chan->GetValueFromCA();
 			else
-				MCAError::Message(MCAError::MCAERR, "MCAGET(51) can only be used for numeric PVs.");
+				MCAError::Error("MCAGET(51) can only be used for numeric PVs.");
 		}
 
 		// Now retrieve the values for each channel
@@ -588,7 +537,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+                MCAError::Error("mcatime(%d): Invalid handle.", Handle);
 
 			plhs[i] = mxCreateDoubleMatrix(1, 2, mxREAL);
 			double *myDblPr = mxGetPr(plhs[i]);
@@ -611,7 +560,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+                MCAError::Error("mcaalarm(%d): Invalid handle.", Handle);
 
 			plhs[i] = mxCreateDoubleMatrix(1, 2, mxREAL);
 			double *myDblPr = mxGetPr(plhs[i]);
@@ -648,7 +597,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+                MCAError::Error("mcaput(%d): Invalid handle.", Handle);
 
 			chtype RequestType = Chan->GetRequestType();
 			int Num = Chan->GetNumElements(); 
@@ -733,7 +682,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			//
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+                MCAError::Error("mcaput(%d): Invalid handle.", Handle);
 
 			if (Chan->IsNumeric()) {
 
@@ -746,7 +695,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                                 myDblPr[i] = status;
 			}
 			else
-				MCAError::Message(MCAError::MCAERR, "MCAPUT(80) can only be used for numeric PVs.");
+				MCAError::Error("MCAPUT(80) can only be used for numeric PVs.");
 
 		}
 		break;
@@ -763,7 +712,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+             MCAError::Error("mcamon(%d): Invalid handle.", Handle);
 
 		// If a monitor event is installed, then just replace the monitor string.
 		//
@@ -792,7 +741,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 				}
 				else
-					MCAError::Message(MCAError::MCAERR, "Third argument to mcamon must be a string.");
+					MCAError::Error("Third argument to mcamon must be a string.");
 			}
 			plhs[0] = mxCreateScalarDouble(1);
 
@@ -822,7 +771,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 				}
 				else
-					MCAError::Message(MCAError::MCAERR, "Third argument to mcamon must be a string.");
+					MCAError::Error("Third argument to mcamon must be a string.");
 			}
 			else
 
@@ -851,7 +800,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		//
 		Channel *Chan = (Channel *)ChannelTable.find(Handle);
 		if (!Chan)
-			MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+            MCAError::Error("mcaclearmon(%d): Invalid handle.", Handle);
 
 		Chan->ClearEvent();
 		
@@ -873,7 +822,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			//
 			Channel *Chan = (Channel *)ChannelTable.find(Handle);
 			if (!Chan)
-				MCAError::Message(MCAError::MCAERR, "No channel exists for this handle.");
+                MCAError::Error("mcacache(%d): Invalid handle.", Handle);
 
 			Cache = Chan->GetMonitorCache();
 			if (Cache)
@@ -1032,10 +981,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
 
 	default:
-    {
-        char message[100];
-        sprintf(message, "Invalid mca code %d", commandswitch);
-		MCAError::Message(MCAError::MCAERR, message);
-    }
+		MCAError::Error("Invalid mca code %d", commandswitch);
 	}  // switch (command)
 }

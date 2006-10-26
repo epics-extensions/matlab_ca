@@ -1,24 +1,27 @@
 
+// System
+#include <stdarg.h>
+// Matlab
 #include "mex.h"
+// Local
 #include "MCAError.h"
 
-void MCAError::Message(Level level, const char *msg)
+void MCAError::Warn(const char *format, ...)
 {
-    switch (level)
-    {
-    case MCAINFO:
-        mexPrintf(msg);
-        mexPrintf("\n");
-        break;
-    case MCAWARN:
-        mexWarnMsgTxt(msg);
-        mexPrintf("\n");
-        break;
-    case MCAERR:
-        mexErrMsgTxt(msg);
-        break;
-    default:
-        mexPrintf("MCAError.Message: Invalid Option\n");
-    }
+    va_list ap;
+    va_start(ap, format);
+    char msg[4000];
+    vsnprintf(msg, sizeof(msg), format, ap);
+    mexWarnMsgTxt(msg);
+    va_end(ap); 
 }
 
+void MCAError::Error(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    char msg[4000];
+    vsnprintf(msg, sizeof(msg), format, ap);
+    mexErrMsgTxt(msg);
+    va_end(ap); 
+}
