@@ -16,7 +16,7 @@ using namespace std;
 #include <cadef.h>
 #include <epicsMutex.h>
 #include <tsDefs.h>
-#include <dBDefs.h>
+#include <dbDefs.h>
 
 // Local
 #include "ChannelAccess.h"
