@@ -21,7 +21,8 @@ error:
   in the mcastate or mcainfo lists at all,
   so they also don't show up as 'closed'.
 - MCACHECK is now the same as MCASTATE.
-  
+- MCATIME used to return a Matlab datenum for the UTC time zone,
+  now it's 'local' time.
 
 * V 3.2 - Kay Kasemir, June 30 2006
 steven.banks@synchrotron.vic.gov.au emailed a snapshot

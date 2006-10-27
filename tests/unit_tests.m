@@ -122,3 +122,25 @@ info = mcainfo(pv);
 assertEquals('double', 'ENUM', info.NativeType);
 mcaclose(pv);
 
+function testGetMultiple
+names={'fred', 'janet'};
+pvs = mcaopen(names);
+assertEquals('connected', 1, mcastate(pvs(1)));
+assertEquals('connected', 1, mcastate(pvs(2)));
+vals = mcaget(pvs);
+assertEquals('got array', 2, length(vals));
+mcaclose(pvs);
+
+
+function testGetTimes
+names={'fred', 'janet'};
+pvs = mcaopen(names);
+assertEquals('connected', 1, mcastate(pvs(1)));
+assertEquals('connected', 1, mcastate(pvs(2)));
+vals = mcaget(pvs);
+[t1, t2]=mcatime(pvs(1), pvs(2));
+assertTrue('recent time', abs(t1 - now) < 1);
+assertTrue('recent time', abs(t2 - now) < 1);
+datestr(t1);
+datestr(t2);
+mcaclose(pvs);

@@ -4,6 +4,13 @@ function varargout = mcatime(varargin)
 % The timestamp is returned as a MATLAB serial date number suitable
 % for use in the DATESTR function.
 %
+% The original time stamp is in the UTC timezone,
+% but since Matlab doesn't handle timezones in datenum/datastr,
+% it's converted to the 'local' timezone, so that
+%    datestr(mcatime(pv))
+% should give a time that is close to the wall clock
+% for channels that changed recently.
+%
 % VALUE = MCATIME(HANDLE) 
 %    returns the timestamp of a PV specified by integer HANDLE.
 %
@@ -13,24 +20,10 @@ function varargout = mcatime(varargin)
 %       
 %   See also MCAGET, MCAMON.
 %
-if nargin<1
-    error('No arguments were specified in mcatime')
-elseif nargin==1
-        result{1} = mca(60,varargin{1});
-        day = result{1}(1,1);
-        secs = result{1}(1,2)/1000000000;        
-        % The EPICS epoch is 1-Jan-1990
-        varargout{1} = ((24*3600*datenum('1-Jan-1990') + day)+secs)/(24*3600);
-elseif nargin>1 
-    if ne(nargin,nargout)
-        error('Number of outputs must match the number of inputs')
-    end
-    [result{1:nargin}] = mca(60,varargin{:});
-    for k = 1:nargin
-        day=result{k}(1,1);
-        secs=result{k}(1,2)/1000000000;
-        % The EPICS epoch is 1-Jan-1990
-        varargout{k} = ((24*3600*datenum('1-Jan-1990') + day)+secs)/(24*3600);
-    end
+for i=1:nargin
+	% We get y/m/d H:M:S plus nanosecs...
+    pieces = mca(60,varargin{i});
+    % but datenum doesn't handle nanosecs
+    varargout{i} = datenum(pieces(1:6));
 end
 

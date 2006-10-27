@@ -397,10 +397,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAGET(pv_array) - Get Scalar PV of the same type
-	// Second argument is an array of handles
-	// Returns an array of values
-	case 51:
+	case 51:    // MCAGET(pv_array) - Get Scalar PV of the same type
+                // Second argument is an array of handles
+                // Returns an array of values
 	{
 		double *myRDblPr = mxGetPr(prhs[1]);
 		int M = mxGetM(prhs[1]);
@@ -425,10 +424,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 "MCAGET(%d) can only be used for numeric PVs when called with an array of PVs",
                 Handle);
 		}
-
-		// Now retrieve the values for each channel
-		//
-		for (int j = 0; j < NumHandles; j++) {
+        // TODO: This is nonsense, since it's really one get after the other.
+        // Would make sense if GetValueFromCA() didn't flush CA,
+        // then follow with one 'wait' right here to get all values...
+		for (int j = 0; j < NumHandles; j++)
+        {
 			int Handle = (int) myRDblPr[j];
 			Channel *Chan = ChannelTable.find(Handle);
 			myLDblPr[j] = (double)Chan->GetNumericValue(0);
@@ -437,44 +437,41 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCATIME - Returns the EPICS Timestamp for the most recently retrieved value
-	//           for a channel (via MCAGET or MCAMON)
-	//
-	case 60:
+	case 60:    // MCATIME - Returns the local 
+                // year, month, day, hour, min, sec, nanosec
+                // for the most recently retrieved value
+                // for a channel (via MCAGET or MCAMON)
 	{
-		for (int i = 0; i < nrhs - 1; i++) {
-
-			// Retrieve the Channel from the Channel Table.
-			// (First argument of prhs is the command switch)
-			//
+		for (int i = 0; i < nrhs - 1; i++)
+        {
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcatime(%d): Invalid handle.", Handle);
-
-			plhs[i] = mxCreateDoubleMatrix(1, 2, mxREAL);
-			double *myDblPr = mxGetPr(plhs[i]);
-			myDblPr[0] = (Chan->GetTimeStamp()).secPastEpoch;
-			myDblPr[1] = (Chan->GetTimeStamp()).nsec;
+			plhs[i] = mxCreateDoubleMatrix(1, 7, mxREAL);
+			double *d = mxGetPr(plhs[i]);
+            epicsTime time(Chan->GetTimeStamp());
+            local_tm_nano_sec local = (local_tm_nano_sec) time;
+			d[0] = local.ansi_tm.tm_year + 1900;
+            d[1] = local.ansi_tm.tm_mon + 1;
+            d[2] = local.ansi_tm.tm_mday;
+            d[3] = local.ansi_tm.tm_hour;
+            d[4] = local.ansi_tm.tm_min;
+            d[5] = local.ansi_tm.tm_sec;
+            d[6] = local.nSec;
 		}
 		break;
 	}
 
-	// MCAALARM - Returns the EPICS Alarm Status and Severity for the most 
-	//            recently retrieved value for a channel (via MCAGET or MCAMON)
-	//
-	case 61:
+	case 61:    // MCAALARM - Returns the EPICS Alarm Status and Severity for the most 
+                //            recently retrieved value for a channel (via MCAGET or MCAMON)
 	{
-		for (int i = 0; i < nrhs - 1; i++) {
-
-			// Retrieve the Channel from the Channel Table.
-			// (First argument of prhs is the command switch)
-			//
+		for (int i = 0; i < nrhs - 1; i++)
+        {
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcaalarm(%d): Invalid handle.", Handle);
-
 			plhs[i] = mxCreateDoubleMatrix(1, 2, mxREAL);
 			double *myDblPr = mxGetPr(plhs[i]);
 			myDblPr[0] = (double)Chan->GetAlarmStatus();
