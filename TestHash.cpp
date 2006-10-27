@@ -32,10 +32,10 @@ int main()
     }
     
     puts("Iterate...");
-    IntHashIterator<double> iter(hash);
+    IntHash<double>::Iterator iter(hash);
     i = 0;
     double *d;
-    while (d = iter.next())
+    while ((d = iter.getValue()) != 0)
     {
         ++i;
         if (iter.getKey() != (int)*d  ||
@@ -44,6 +44,7 @@ int main()
             printf("braindead iter\n");
             return -1;
         }
+        iter.next();
     }
     if (i != N)
     {
@@ -65,7 +66,9 @@ int main()
             printf("wrong item: %d != %g\n", i, *f);
             return -1;
         }
-        hash.remove(i);
+        double *r = hash.remove(i);
+        if (r != f)
+            printf("wrong item removed: %g != %g\n", *r, *f);
         delete f;
     }
     if (hash.size() != 0)
@@ -100,17 +103,24 @@ int main()
     }
     
     puts("Delete via iterator");
-    IntHashIterator<double> iter2 = IntHashIterator<double>(hash); 
-
+    IntHash<double>::Iterator iter2(hash);
     // Delete all the channels from the Channel Table
-    while ((d = iter2.next()) != 0)
+    while ((d = iter2.getValue()) !=0)
     {
-        if ((int)*d != iter2.getKey())
-            printf("inconsitency: key %d vs. value %g\n",
-                           iter2.getKey(), *d);
-        hash.remove((int)*d);
-        delete d;
+        double *r = iter2.remove();
+        if (r != d)
+        {
+            printf("wrong item: %g != %g\n", *r, *d);
+            return -1;
+        }
+        delete r;
     }
+    if (hash.size() != 0)
+    {
+        printf("wrong size: %d\n", hash.size());
+        return -1;
+    }
+    
     puts("OK.");
         
     return 0;
