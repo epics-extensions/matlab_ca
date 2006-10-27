@@ -16,36 +16,43 @@ function sts = mcaput(varargin)
 % 
 % Note (Advanced): MCAPUT is implemented as a call to ca_put_array_callback function
 %    in CA client library. MCAPUT returns zero if the server does not confirm the 'put'
-%    within the MCA_PUT_TIMEOUT. !!! HOWEVER the 'put' may still go through after that.
-%    MCA_PUT_TIMEOUT can be set with MCATIMEOUT
+%    within the 'put' timeout.
+%    !!! HOWEVER the 'put' may still go through after that, and since the 
+%    default timeout is very small, it's quite likely to get a negative answer.
+%
+% Note: The special case of MCAPUT([PV, PV, ...], [SCALAR, SCALAR, ...])
+% will simply write the scalar values to the PVs without waiting for the
+% callback.
 %    
 % See also MCAGET, MCATIMEOUT.
 
-
 if nargin==2
-    
     if iscell(varargin{1}) & iscell(varargin{2})
+        % {pv, pv, pv, ...}, {value, value, value, ...}
         if length(varargin{1})~=length(varargin{2})
             error('Cell array of MCA handles and cell array of values must be the same length')
-        else
-            HANDLES = varargin{1}; VALUES = varargin{2};
-            ARGS = reshape([HANDLES(:)';VALUES(:)'],1,2*length(varargin{1}));
-        end
+		end
+        HANDLES = varargin{1}; VALUES = varargin{2};
+        ARGS = reshape([HANDLES(:)';VALUES(:)'],1,2*length(varargin{1}))
         sts = mca(70,ARGS{:});
     elseif isnumeric(varargin{1})
         if length(varargin{1})>1
             if length(varargin{1})~=length(varargin{2})
                 error('Array of handles and array of values must be the same length');
             end
+	        % [pv, pv, pv, ...], [value, value, value, ...]
             sts = mca(80,varargin{1},varargin{2});
         else
             ARGS = varargin;
+			% (pv, value)
             sts = mca(70,ARGS{:});
         end
+    else
+    	error('Invalid mcaput args, need PV, VALUE');
     end
 elseif ~rem(nargin,2)
-    ARGS = varargin; 
-    sts = mca(70,ARGS{:});
+	% 'pv, value, pv, value, ...'
+    sts = mca(70,varargin{:});
 else
-    error('Incorrect number of inputs')
+    error('Incorrect number of inputs, need a sequence of PV, VALUE')
 end

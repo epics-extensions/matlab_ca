@@ -480,9 +480,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAPUT - Put values to PVs by their MCA Handles
-	//
-	case 70:
+	case 70:    // MCAPUT(PV, VALUE, PV, VALUE, ...) - Put values to PVs by their MCA Handles
 	{
 
 		int i;
@@ -573,40 +571,27 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAPUT - Put values to scalar numeric PVs by their MCA Handles
-	//
+	// MCAPUT(PV-array, VALUE-array) - Where VALUE array contains only scalars
 	case 80:
 	{
-		double *myDblPr;
 		int M = mxGetM(prhs[1]);
 		int N = mxGetN(prhs[1]);
 		int NumHandles = M * N;
-
 		plhs[0] = mxCreateDoubleMatrix(M, N, mxREAL);
-
-		for (int i = 0; i < NumHandles; i++) {
-
+		for (int i = 0; i < NumHandles; i++)
+        {
 			int Handle = (int) (*(mxGetPr(prhs[1]) + i));
-
-			// Find the channel with the specified handle
-			//
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
-                MCAError::Error("mcaput(%d): Invalid handle.", Handle);
-
-			if (Chan->IsNumeric()) {
-
-				// Write the value to the PV
-				//
-				double Value = (*(mxGetPr(prhs[2]) + i));
-				Chan->SetNumericValue(0, Value);					
-				int status = Chan->PutValueToCA(1);
-				myDblPr = mxGetPr(plhs[0]);
-                                myDblPr[i] = status;
-			}
-			else
-				MCAError::Error("MCAPUT(80) can only be used for numeric PVs.");
-
+                MCAError::Error("mcaput: Invalid handle %d.", Handle);
+			if (! Chan->IsNumeric())
+                MCAError::Error("MCAPUT([pv, pv, ..], [scalar, scalar, ...]) can only be used for numeric PVs.");
+			// Write the value to the PV
+			double Value = (*(mxGetPr(prhs[2]) + i));
+			Chan->SetNumericValue(0, Value);					
+			int status = Chan->PutValueToCA(1);
+            double *myDblPr = mxGetPr(plhs[0]);
+            myDblPr[i] = status;
 		}
 		break;
 	}

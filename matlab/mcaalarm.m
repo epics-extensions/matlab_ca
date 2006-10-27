@@ -2,15 +2,18 @@ function varargout = mcaalarm(varargin)
 %MCAALARM     - read alarm status and severity for PVs previously read with MCAGET or MCAMON
 %
 % VALUE = MCAALARM(HANDLE) 
-%    returns the status and severity of a PV specified by integer HANDLE.
+%    returns the status and severity of a PV specified by integer HANDLE:
+%
+%    VALUE is a structure:
+%       'status'  : Status code
+%       'severity': Severity code
+%
+% Refer to the EPICS header file "alarmString.h" for the code definitions.
 %
 % [VALUE1, ... VALUEN] = MCAALARM(HANDLE1, ... , HANDLEN)
 %    returns status and severity of multiple PVs of any type and length
 %    Number of outputs must match the number of inputs
 %       
-% Look in EPICS file "alarmString.h" for the definitions of the status and
-% severity values returned by this function.
-%
 %   See also MCAGET, MCAMON.
 %
 if nargin<1

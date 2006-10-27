@@ -303,12 +303,11 @@ const char* Channel::GetStringValue ( int Index ) const
 	return Str;
 }
 
-void Channel::SetNumericValue( int Index, double Value )
+void Channel::SetNumericValue(int Index, double Value)
 {
-	MCAError Err;
-
 	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
-	switch (Type) {
+	switch (Type)
+    {
 	case DBR_INT:
 		*((dbr_short_t *) (DataBuffer) + Index) = (dbr_short_t) (Value);
 		break;
@@ -330,7 +329,6 @@ void Channel::SetNumericValue( int Index, double Value )
 	case DBR_STRING:
 		MCAError::Error("SetNumericValue() cannot take a String value.");
 	}
-
 }
 
 void Channel::SetStringValue ( int Index, char* StrBuffer) {
@@ -349,10 +347,9 @@ void Channel::SetStringValue ( int Index, char* StrBuffer) {
 
 }
 
-void Channel::PutValueToCACallback ( int Size, caEventCallBackFunc *PutEventHandler ) {
-
+void Channel::PutValueToCACallback (int Size, caEventCallBackFunc *PutEventHandler)
+{
 	int status;
-	MCAError Err;
 
 	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
 	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer, PutEventHandler, this);
@@ -366,25 +363,25 @@ void Channel::PutValueToCACallback ( int Size, caEventCallBackFunc *PutEventHand
 	return;
 }
 
-int Channel::PutValueToCA ( int Size ) const {
-
-	int status;
+int Channel::PutValueToCA (int Size) const 
+{
 	int RetVal;
-	MCAError Err;
 
 	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
-	status = ca_array_put(Type, Size, ChannelID, DataBuffer);
+	int status = ca_array_put(Type, Size, ChannelID, DataBuffer);
 	if (status != ECA_NORMAL)
 		RetVal = 0;
 	else
 		RetVal = 1;
 
 	status = CA->WaitForPutIO();
-
-	return (RetVal);
+    if (status != ECA_NORMAL)
+        return 0;
+	return RetVal;
 }
 
-void Channel::SetLastPutStatus( double Status ) {
+void Channel::SetLastPutStatus( double Status )
+{
 	LastPutStatus = Status;
 }
 

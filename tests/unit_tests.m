@@ -131,7 +131,6 @@ vals = mcaget(pvs);
 assertEquals('got array', 2, length(vals));
 mcaclose(pvs);
 
-
 function testGetTimes
 names={'fred', 'janet'};
 pvs = mcaopen(names);
@@ -144,3 +143,42 @@ assertTrue('recent time', abs(t2 - now) < 1);
 datestr(t1);
 datestr(t2);
 mcaclose(pvs);
+
+function testAlarm
+% 'ramp' should go in and out of MAJOR/HIGH alarm...
+pv = mcacheckopen('ramp');
+% Wait for 'normal'
+i=1;
+while i<10
+	mcaget(pv);
+	ss = mcaalarm(pv);
+	if ss.severity == 0
+		break
+	end
+	pause(1.0);
+	i=i+1;
+end
+assertTrue('found normal severity', i<10);
+% Wait for 'major'
+i=1;
+while i<10
+	mcaget(pv);
+	ss = mcaalarm(pv);
+	if ss.severity == 2
+		break
+	end
+	pause(1.0);
+	i=i+1;
+end
+assertTrue('found major severity', i<10);
+
+
+function testArrayput
+p1 = mcacheckopen('set1');
+p2 = mcacheckopen('set2');
+mcaput([p1 p2], [1 2]);
+assertEquals('put OK', 1, mcaget(p1));
+assertEquals('put OK', 2, mcaget(p2));
+mcaput([p1 p2], [3 4]);
+assertEquals('put OK', 3, mcaget(p1));
+assertEquals('put OK', 4, mcaget(p2));
