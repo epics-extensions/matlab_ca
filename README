@@ -2,8 +2,6 @@ Overview
 ========
 MCA is an EPICS ChannelAccess client interface for Matlab.
 
-It isn't really maintained by anybody.
-
 Andrei Terebilo (SLAC) is the original author.
 Carl Lionberger (LBL) maintained it for a while when
 he was at the SNS.
@@ -14,8 +12,39 @@ Ernest Williams (SNS) simplified the setup, make file etc.
 Kay Kasemir (kasemirk@ornl.gov) fixed a minor array bug
 and merged the 'SNS' sources with Steven's.
 
-Compilation
-===========
+Usage
+=====
+After successful setup (see below), you should be able to use
+the online help:
+
+>> help mca/matlab
+MCAALARM     - read alarm status and severity for PVs previously read with MCAGET or MCAMON
+MCACACHE     - reads locally cached value of a PV. 
+MCACHECK     - Same as MCASTATE
+MCACHECKOPEN - returns handle(s) to PV(s)
+MCACLEARMON  - uninstall monitors, previously installed with MCAMON
+MCACLOSE     - permanently closes channels
+MCAEXIT      - Shut down channel access...
+MCAGET       - read values from PV's
+MCAINFO      - get connection status and other information about a PV 
+MCAISOPEN    - Check if a channel to a PV is open with MCAOPEN
+MCAMON       - install or replace monitor on a PV
+MCAMONEVENTS - returns the number of monitor events which have
+MCAMONTIMER  - Controls the initialisation and termination of the MATLAB
+MCAOPEN      - open a Channel Access connection to an EPICS Process Variable
+MCAPOLL      - poll channel access...
+MCAPUT       - Write values to EPICS Process Variables
+MCASTATE     - returns an array of connection states for open channels
+MCATIME      - read timestamps for PVs previously read with MCAGET or MCAMON
+MCATIMEOUT   - set or display MCA timeout setings
+MCAUNLOCK    - unlocks the MCAMAIN mex-file 
+MCAVERSION   - get version info 
+
+Start reading at 'help mcaopen'.
+
+
+Compilation, Setup
+==================
 In principle, the Matlab 'mex' command takes care of
 invoking the correct compiler & linker for your
 platform and your version of Matlab.

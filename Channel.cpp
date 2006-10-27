@@ -200,10 +200,9 @@ const char* Channel::GetRequestTypeStr()  const {
 
 }
 
-void Channel::GetValueFromCA() {
-
+void Channel::GetValueFromCA()
+{
 	int status;
-	MCAError Err;
 
 	status = ca_array_get(RequestType, NumElements, ChannelID, DataBuffer);
 	if (status != ECA_NORMAL)
@@ -213,7 +212,8 @@ void Channel::GetValueFromCA() {
 	if (status != ECA_NORMAL)
         MCAError::Error("GetValueFromCA: %s\n", ca_message(status));
 
-	switch (RequestType) {
+	switch (RequestType)
+    {
 	case DBR_TIME_INT:
 		TimeStamp = ((struct dbr_time_short *) DataBuffer)->stamp;
 		AlarmStatus = ((struct dbr_time_short *) DataBuffer)->status;
@@ -250,14 +250,13 @@ void Channel::GetValueFromCA() {
 		AlarmSeverity = ((struct dbr_time_string *) DataBuffer)->severity;
 		break;
 	default:
-		MCAError::Error("Unimplemented Request Type %d in GetValueFromCA().",
-         RequestType);
+		MCAError::Error("GetValueFromCA(%s): Unimplemented Request Type %d\n",
+                        PVName, RequestType);
 	}
-
 }
 
-double Channel::GetNumericValue( int Index ) const {
-
+double Channel::GetNumericValue( int Index ) const
+{
 	double Val;
 	MCAError Err;
 
@@ -281,42 +280,31 @@ double Channel::GetNumericValue( int Index ) const {
 		Val = (double) (*(&(DataBuffer->tdblval.value) + Index));
 		break;
 	case DBR_TIME_STRING:
-		MCAError::Error("GetNumericValue() cannot return a string value.");
+		MCAError::Error("GetNumericValue(%s) cannot return a string value.",
+                        PVName);
 	}
 	return Val;
-
 }
 
-const char* Channel::GetStringValue ( int Index ) const {
-
+const char* Channel::GetStringValue ( int Index ) const
+{
 	char *Str;
 	MCAError Err;
 
-	switch (RequestType) {
+	switch (RequestType)
+    {
 	case DBR_TIME_STRING:
 		Str = (char *)(&(DataBuffer->tstrval.value) + Index);
 		break;
 	default:
-		MCAError::Error("GetStringValue() cannot return a string value.");
+		MCAError::Error("GetStringValue(%s) cannot return a string value.",
+                        PVName);
 	}
 	return Str;
-
 }
 
-epicsTimeStamp Channel::GetTimeStamp() const {
-	return TimeStamp;
-}
-
-dbr_short_t Channel::GetAlarmStatus() const {
-	return AlarmStatus;
-}
-
-dbr_short_t Channel::GetAlarmSeverity() const {
-	return AlarmSeverity;
-}
-
-void Channel::SetNumericValue( int Index, double Value ) {
-
+void Channel::SetNumericValue( int Index, double Value )
+{
 	MCAError Err;
 
 	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;

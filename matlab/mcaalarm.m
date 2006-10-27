@@ -1,5 +1,5 @@
 function varargout = mcaalarm(varargin)
-%MCAGET read alarm status and severity for PVs previously read with MCAGET or MCAMON
+%MCAALARM     - read alarm status and severity for PVs previously read with MCAGET or MCAMON
 %
 % VALUE = MCAALARM(HANDLE) 
 %    returns the status and severity of a PV specified by integer HANDLE.

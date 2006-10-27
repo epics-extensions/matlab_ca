@@ -1,8 +1,8 @@
 function varargout = mcacheckopen(varargin)
-%MCACHECKOPEN returns handle(s) to PV(s)
-% Returns existong numeric handles for PVs already connected.
-% Opens new connections otherwise.
-% Returns 0 for PVs that failed to connect
+%MCACHECKOPEN - returns handle(s) to PV(s)
+% Returns existing handles for PVs already connected,
+% opens new connections otherwise.
+% Returns 0 for PVs that failed to connect.
 %
 % HANDLE = MCACHECKOPEN('NAME')
 %
@@ -11,6 +11,14 @@ function varargout = mcacheckopen(varargin)
 % HANDLES = MCACHECKOPEN(NAMES)
 %    When NAMES is a cell array of strings, HANDLES is a numeric array of
 %    handles
+%
+% Note:
+% In principle, one should open, use, close PVs.
+% But in some cases the bookkeeping of PV handles might
+% be a bit too much for quick script hacks,
+% in which case mcacheckopen can help with re-use of
+% existing handles for PVs that were opened earlier yet
+% their handles are lost.
 %
 % See also MCAOPEN, MCAISOPEN
 

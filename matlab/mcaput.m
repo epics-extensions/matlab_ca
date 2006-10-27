@@ -1,5 +1,5 @@
 function sts = mcaput(varargin)
-%MCAPUT Write values to EPICS Process Variables
+%MCAPUT       - Write values to EPICS Process Variables
 %
 % MCAPUT(HANDLE1, VALUE1) - one handle, one value
 % MCAPUT(HANDLE1,VALUE1, ... , HANDLEN, VALUEN) - handles and values in pairs

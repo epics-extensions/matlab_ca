@@ -1,5 +1,5 @@
 function mcaclose(varargin)
-%MCACLOSE permanently closes channels
+%MCACLOSE     - permanently closes channels
 % MCACLOSE(H1,H2,...,HN) closes the channels identified by their
 %    integer handles, previously opened with MCAOPEN.
 % MCACLOSE(H) is the same for the case that H is an array of handles.

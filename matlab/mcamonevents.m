@@ -1,5 +1,5 @@
 function varargout = mcamonevents(varargin)
-%MCAMONEVENTS returns the number of monitor events which have
+%MCAMONEVENTS - returns the number of monitor events which have
 %             occurred for channels since the last call to MCACACHE.
 %
 % [HANDLES, EVENTCOUNT] = MCAMONEVENTS

@@ -1,5 +1,5 @@
 function varargout = mcatimeout(varargin)
-%MCATIMEOUT set or display MCA timeout setings
+%MCATIMEOUT   - set or display MCA timeout setings
 %   
 %   MCATIMEOUT('open', t1)  
 %       'open' option sets the internal variable MCA_SEARCH_TIMEOUT to t1 (sec)

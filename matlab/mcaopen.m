@@ -1,5 +1,5 @@
 function varargout = mcaopen(varargin);
-%MCAOPEN open a Channel Access connection to an EPICS Process Variable
+%MCAOPEN      - open a Channel Access connection to an EPICS Process Variable
 %
 %   H = MCAOPEN(PVNAME);
 %       If successful H is a unique nonzero integer handle associated with this PV.
@@ -19,7 +19,12 @@ function varargout = mcaopen(varargin);
 %       HANDLES is a numeric array of handles
 %       NAMES is a cell array of strings with PV names
 %
-%   See also: MCACLOSE
+%   Note:
+%   When done, one should probably use MCACLOSE on the handle.
+%   When you use the same channel again "later", you might keep it open.
+%   See MCACHECKOPEN for a lazy person's bookkeeping helper.
+%
+%   See also: MCACHECKOPEN, MCAISOPEN, MCACLOSE
 
 if nargin>1 & ne(nargin,nargout)
     error('Number of outputs must match the number of inputs')

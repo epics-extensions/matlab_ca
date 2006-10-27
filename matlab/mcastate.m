@@ -1,5 +1,5 @@
 function varargout = mcastate(varargin);
-%MCASTATE returns an array of connection states for open channels
+%MCASTATE     - returns an array of connection states for open channels
 % MCASTATE is used as diagnostics prior to issuing other
 % MCA commands such as MCAGET, MCAPUT and MCAMON
 %

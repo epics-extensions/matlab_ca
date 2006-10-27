@@ -1,5 +1,5 @@
 function varargout = mcainfo(varargin);
-%MCAINFO get connection status and other information about a PV 
+%MCAINFO      - get connection status and other information about a PV 
 % INFO = MCAINFO(PV) returns information on a single PV
 %   PV can be a string PV name or an integer handle
 %   Returns a 1-by-1 structure with fields:

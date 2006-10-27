@@ -1,6 +1,6 @@
 Matlab Channel Access (MCA)
 
-* V 4 - Kay Kasemir, Sept 2006
+* V 4.0 - Kay Kasemir, Sept 2006
 Some cleanup on the way to understanding the code
 in order to fix the "No channel exists for this handle."
 error:
@@ -15,10 +15,13 @@ error:
   In mca_cleanup, the 'iterator' would use the node that
   was just deleted to get the 'next' node.
 - Increased the default search timeout from 1 to 10 seconds.
-- Online help for mcainfo and mcastate was wrong:
-  Closed channels are simply gone. They don't show up
+- Reviewed all the online help, fixed some inconsistencies.
+  Example: mcainfo and mcastate were wrong.
+  Since closed channels are simply gone, they don't show up
   in the mcastate or mcainfo lists at all,
   so they also don't show up as 'closed'.
+- MCACHECK is now the same as MCASTATE.
+  
 
 * V 3.2 - Kay Kasemir, June 30 2006
 steven.banks@synchrotron.vic.gov.au emailed a snapshot

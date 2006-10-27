@@ -1,5 +1,5 @@
 function mcaclearmon(varargin)
-%MCACLEARMON uninstall monitors, previously installed with MCAMON
+%MCACLEARMON  - uninstall monitors, previously installed with MCAMON
 % 
 % MCACLEARMON(H1,H2,...,HN)
 %    H1,H2..,HN - integer channel handles 

@@ -1,4 +1,5 @@
 function mcaexit()
-% Shut down channel access...
-% MCAEXIT()
+%MCAEXIT      - Shut down channel access...
+%
+% Disconnects all PVs.
 mca(999)

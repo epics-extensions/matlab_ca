@@ -58,7 +58,13 @@ assertEquals('Correct name', 'janet', names{2});
 assertEquals('Two channels', 2, length(h));
 assertEquals('Correct name', 'fred', infos(1).PVName);
 assertEquals('Correct name', 'janet', infos(2).PVName);
+assertEquals('checkopen', pv2, mcacheckopen('janet'));
+assertEquals('checkopen', pv, mcacheckopen('fred'));
+assertEquals('isopen', pv2, mcaisopen('janet'));
+assertEquals('isopen', pv, mcaisopen('fred'));
 mcaclose(pv2, pv);
+assertEquals('isopen', 0, mcaisopen('janet'));
+assertEquals('isopen', 0, mcaisopen('fred'));
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));
 
@@ -73,12 +79,6 @@ mcaclose(pvs);
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));
 
-function testBasicGet
-pv = mcaopen('fred');
-val = mcaget(pv);
-mcaclose(pv);
-
-
 function testState
 names={'fred', 'janet'};
 pvs = mcaopen(names);
@@ -87,4 +87,12 @@ assertEquals('connected', 1, mcastate(pvs(2)));
 % hard to test 'disconnected' without stopping the CA server...
 mcaclose(pvs);
 
+function testBasicGet
+pv = mcaopen('fred');
+val = mcaget(pv);
+mcaclose(pv);
+pv = mcaopen('alan');
+val = mcaget(pv);
+assertTrue('got array', length(val) > 1);
+mcaclose(pv);
 

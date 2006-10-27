@@ -1,5 +1,5 @@
 function varargout = mcamon(handle,varargin)
-%MCAMON install or replace monitor on a PV
+%MCAMON       - install or replace monitor on a PV
 %   
 % STS = MCAMON(HANDLE) installs monitor with default callback.
 %   Default callback updates local copy of the channel data

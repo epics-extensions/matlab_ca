@@ -1,5 +1,5 @@
 function h = mcaisopen(PVNAMESTRING);
-%MCAISOPEN Check if a channel to a PV is open with MCAOPEN
+%MCAISOPEN    - Check if a channel to a PV is open with MCAOPEN
 %
 %   H = MCAISOPEN(PVNAMESTRING) returns an integer handle if open
 %   and 0 otherwise.  If more than one channel is open to the 

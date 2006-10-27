@@ -1,5 +1,5 @@
 function varargout = mcatime(varargin)
-%MCAGET read timestamps for PVs previously read with MCAGET or MCAMON
+%MCATIME      - read timestamps for PVs previously read with MCAGET or MCAMON
 %
 % The timestamp is returned as a MATLAB serial date number suitable
 % for use in the DATESTR function.

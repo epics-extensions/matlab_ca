@@ -229,25 +229,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	case 4:    // MCACHECK - Check if PV is connected.
-	{
-		plhs[0] = mxCreateDoubleMatrix(1, nrhs - 1, mxREAL);
-		double *myDblPr = mxGetPr(plhs[0]);
-		for (int i = 0; i < nrhs - 1; i++)
-        {
-			// (First argument of prhs is the command switch)
-			int Handle = (int) mxGetScalar(prhs[i + 1]);
-			Channel *Chan = ChannelTable.find(Handle);
-			if (!Chan)
-            {
-				myDblPr[i] = 0;
-				MCAError::Error("mcacheck(%d): Invalid handle.", Handle);
-			}
-			else
-				myDblPr[i] = (double) (Chan->GetState() == cs_conn);
-		}
-		break;
-	}
+    // 4 used to be MCACHECK, now same as MCASTATE
 
 	case 5:    // MCACLOSE - Close one channel
 	{
@@ -381,60 +363,45 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		ca_poll();
 		break;
 
-	// MCAGET - Get PV Values by their MCA Handles
-	//
-	case 50:
+	case 50:    // MCAGET(pv, pv, ...) - Get PV Values by their MCA Handles
 	{
-		int i, j;
-
-		for (i = 0; i < nrhs - 1; i++) {
-
-			// Retrieve the Channel from the Channel Table.
-			// (First argument of prhs is the command switch)
-			//
+		for (int i = 0; i < nrhs - 1; i++)
+        {
 			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
 				MCAError::Error("mcaget(%d): Invalid handle.", Handle);
-
 			// Get the current value from Channel Access.
-			//
+            // Calls MCAError::Error on failure...
 			Chan->GetValueFromCA();
-
 			int Num = Chan->GetNumElements(); 
-
-			chtype RequestType = Chan->GetRequestType();
-			if (RequestType == DBR_TIME_STRING) {
-
+			if (Chan->GetRequestType() == DBR_TIME_STRING)
+            {
 				if (Num == 1)
 					plhs[i] = mxCreateString(Chan->GetStringValue(0));
-				else {
-					
+				else
+                {
 					plhs[i] = mxCreateCellMatrix(1, Num);
-					for (j = 0; j < Num; j++)
+					for (int j = 0; j < Num; j++)
 						mxSetCell(plhs[i], j, mxCreateString(Chan->GetStringValue(j)));
 				}
 			}
-			else {
-
+			else
+            {
 				plhs[i] = mxCreateDoubleMatrix(1, Num, mxREAL);
 				double *myDblPr = mxGetPr(plhs[i]);
-
-				for (j = 0; j < Num; j++)
+				for (int j = 0; j < Num; j++)
 					myDblPr[j] = Chan->GetNumericValue(j);
 			}
 		}
 		break;
 	}
 
-	// MCAGET - Get Scalar PV of the same type
-	//
+	// MCAGET(pv_array) - Get Scalar PV of the same type
 	// Second argument is an array of handles
 	// Returns an array of values
-	//
 	case 51:
 	{
-
 		double *myRDblPr = mxGetPr(prhs[1]);
 		int M = mxGetM(prhs[1]);
 		int N = mxGetN(prhs[1]);
@@ -444,9 +411,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		double *myLDblPr = mxGetPr(plhs[0]);
 
 		// Issue get requests for each channel
-		//
-		for (int i = 0; i < NumHandles; i++) {
-
+		for (int i = 0; i < NumHandles; i++)
+        {
 			int Handle = (int) myRDblPr[i];
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
@@ -455,7 +421,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			if (Chan->IsNumeric())
 				Chan->GetValueFromCA();
 			else
-				MCAError::Error("MCAGET(51) can only be used for numeric PVs.");
+				MCAError::Error(
+                "MCAGET(%d) can only be used for numeric PVs when called with an array of PVs",
+                Handle);
 		}
 
 		// Now retrieve the values for each channel

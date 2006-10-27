@@ -1,5 +1,5 @@
 function varargout = mcamontimer(varargin)
-%MCAMONTIMER - Controls the initialisation and termination of the MATLAB
+%MCAMONTIMER  - Controls the initialisation and termination of the MATLAB
 %              timer used to poll the MCA monitor command queue.
 %
 % Started = mcamontimer - returns 1 if monitor polling has been started

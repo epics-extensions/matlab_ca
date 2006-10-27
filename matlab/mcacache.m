@@ -1,5 +1,5 @@
 function varargout = mcacache(varargin)
-%MCACACHE reads locally cached value of a PV. 
+%MCACACHE     - reads locally cached value of a PV. 
 %   MCACACHE does NOT communicate with the server or use resources of CA library  
 %   
 %   VALUE = MCACACHE(HANDLE) returns a value of a PV by integer HANDLE

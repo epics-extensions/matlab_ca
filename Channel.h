@@ -34,21 +34,42 @@ public:
 	int GetNumElements () const;
 	chtype GetRequestType() const;
 	const char* GetRequestTypeStr() const;
+    
+    /** @returns True if value is numeric, i.e. anything but string.
+     *  @see #GetNumericValue()
+     *  @see #GetStringValue()
+     */
 	bool IsNumeric() const;
 
-	// These methods must be used in combination:
-	//
-	// 1) GetValueFromCA - must be called first to retrieve the value from CA
-	// 2) GetNumericValue - use if IsNumeric() returns True
-	// 3) GetStringValue - use if IsNumeric() returns False
-	// 4) GetTimeStamp - returns the Epics time stamp of value obtained from CA
-	//
+    /** Issue a 'get' request to CA.
+     *  Must be called first to retrieve the value from CA.
+     *  Will create Matlab exception on failure, including timeout.
+     */
 	void GetValueFromCA();
+
+    /* @return Most recent time stamp. */    
+    epicsTimeStamp Channel::GetTimeStamp() const
+    {   return TimeStamp; }
+    
+    /* @return Most recent alarm status. */    
+    dbr_short_t Channel::GetAlarmStatus() const
+    {   return AlarmStatus; }
+    
+    /* @return Most recent alarm severity. */    
+    dbr_short_t Channel::GetAlarmSeverity() const
+    {   return AlarmSeverity; }
+
+    /** Get numeric value.
+     *  Use only if isNumeric return true.
+     */    
 	double GetNumericValue( int ) const;
+    
+    /** Get string value.
+     *  Use only if isNumeric return false.
+     */    
 	const char* GetStringValue ( int ) const;
-	epicsTimeStamp GetTimeStamp() const;
-	dbr_short_t	GetAlarmStatus() const;
-	dbr_short_t	GetAlarmSeverity() const;
+	
+
 
 	// These methods must be used in combination:
 	//
@@ -93,7 +114,6 @@ private:
     
     void AllocChanMem();
     
-
     static int NextHandle;
 
     const ChannelAccess* CA;
