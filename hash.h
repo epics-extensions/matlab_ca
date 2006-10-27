@@ -83,7 +83,15 @@ public:
         Elements++;
     }
 
-    void remove (int key)
+    /** Remove element with given key.
+     *  <p>
+     *  <b>NOTE:</b>
+     *  Calling 'remove' invalidates any iterator
+     *  that is currently attached to the hash!
+     * 
+     *  @return The value for that key or 0.
+     */
+    T *remove (int key)
     {
         unsigned char idx = hash(key);
         IntHashNode<T> *prev = 0, *node = nodes[idx];
@@ -96,15 +104,20 @@ public:
                     prev->setNext(node->getNext());
                 else           
                     nodes[idx] = node->getNext();
+                T *value = node->getValue();
                 delete node;
                 Elements--;
-                return;
+                return value;
             }
             prev = node;
             node = node->getNext();
         }
+        return 0;
     }
 
+    /** Find an entry.
+     *  @return The value for that key or 0.
+     */
     T *find (int key)
     {
         unsigned char idx = hash(key);
