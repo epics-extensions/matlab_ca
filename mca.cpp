@@ -26,7 +26,8 @@ using namespace std;
 #include "MCAError.h"
 
 static ChannelAccess *CA = 0;
-static IntHash<Channel> ChannelTable;
+typedef IntHash<Channel> ChannelHash;
+static ChannelHash ChannelTable;
 
 static epicsMutex mutex;
 static Queue<int> MonitorQueue;
@@ -51,21 +52,21 @@ static int addChannel(const char *name)
 
 void mca_cleanup()
 {
-	IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
+	ChannelHash::Iterator iter(ChannelTable);	
 
 	// Delete all the channels from the Channel Table
-	Channel *Chan;
-    while ((Chan = iter.next()) != 0)
+    while (iter.getValue())
     {
+        int key = iter.getKey();
+        Channel *Chan = iter.remove();
 		int Handle = Chan->GetHandle();
-        if (Handle != iter.getKey())
+        if (Handle != key)
             MCAError::Warn("mca_cleanup inconsitency: key %d vs. handle %d\n",
-                           iter.getKey(), Handle);
-		ChannelTable.remove(Handle);
+                           key, Handle);
 		Chan->ClearEvent();
 		delete Chan;
 	}
-
+    
 	// Empty the Monitor Command Queue
 	mutex.lock();
 	while(!MonitorQueue.IsEmpty())
@@ -210,10 +211,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		plhs[1] = mxCreateCellArray(1, &HandlesUsed);
 
 		// Create an iterator for the Channel Table and get the first element.
-		IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
-		Channel* Chan;
+        ChannelHash::Iterator iter(ChannelTable);   
+		Channel *Chan = iter.getValue();
         int i = 0;
-        while ((Chan = iter.next()) != 0)
+        while (Chan)
         {
             int Handle = Chan->GetHandle();
             if (Handle != iter.getKey())
@@ -223,6 +224,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			mxArray *mymxArray = mxCreateString(Chan->GetPVName());
 			mxSetCell(plhs[1], i, mymxArray);
             ++i;
+            Chan = iter.next();
 		}
 		break;
 	}
@@ -278,14 +280,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             plhs[1] = mxCreateStructMatrix(1, HandlesUsed, 7, MCAInfoFields);
 
 			// Create an iterator for the Channel Table and get the first element.
-			IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
-			Channel* Chan;
+            ChannelHash::Iterator iter(ChannelTable);   
+            Channel *Chan = iter.getValue();
             int i = 0;
-            while ((Chan = iter.next()) != 0)
+            while (Chan)
             {
                 getChannelInfo(Chan, plhs[1], i);
 				handles[i] = Chan->GetHandle();
                 ++i;
+                Chan = iter.next();
 			}
             if (i != HandlesUsed)
                 MCAError::Warn("mcainfo: Got %d, expected %d PVs\n",
@@ -335,15 +338,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 {
                     if (HandlesUsed > 0)
                     {
-                        IntHashIterator<Channel> iter = 
-                            IntHashIterator<Channel>(ChannelTable);
+                        ChannelHash::Iterator iter(ChannelTable);   
+                        Channel *Chan = iter.getValue();
                         int i = 0;
-                        Channel* Chan;
-                        while ((Chan = iter.next()) != 0)
+                        while (Chan)
                         {
                             myDblPr0[i] = (double)(Chan->GetHandle());
                             myDblPr1[i] = (double)(Chan->GetState() == 2);
                             ++i;
+                            Chan = iter.next();
                         }
                     }
                     else
@@ -791,13 +794,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	//
 	case 500:
 	{
-		int i, MonitorsInstalled;
+		int i, MonitorsInstalled = 0;
 		int HandlesUsed;
 		int *HandleArray;
 		double *myDblPr;
-		Channel *Chan;
-
-		MonitorsInstalled = 0;
 
 		// Get the total number of defined channels and create an array
 		// to hold the handles of those that have installed monitors.
@@ -807,12 +807,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 		// Iterate through all the defined channels and add their
 		// handles into the array if they have monitors defined.
-		//
-		IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);
-        while ((Chan = iter.next()) != 0)
+        ChannelHash::Iterator iter(ChannelTable);   
+        Channel *Chan = iter.getValue();
+        while (Chan)
         {
 			if (Chan->EventInstalled())
 				HandleArray[MonitorsInstalled++] = Chan->GetHandle();
+            Chan = iter.next();
 		}
 
 		if (MonitorsInstalled > 0)
@@ -855,14 +856,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
 		myDblPr1 = mxGetPr(plhs[1]);
 
-		IntHashIterator<Channel> iter = IntHashIterator<Channel>(ChannelTable);	
-		Channel *Chan;
+		ChannelHash::Iterator iter(ChannelTable);	
+		Channel *Chan = iter.getValue();
         int i = 0;
-        while ((Chan = iter.next()) != 0)
+        while (Chan)
         {
 			myDblPr0[i] = Chan->GetHandle();
 			myDblPr1[i] = Chan->GetEventCount();
             ++i;
+            Chan = iter.next();
 		}
 		break;
 	}
