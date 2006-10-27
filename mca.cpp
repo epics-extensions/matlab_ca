@@ -287,6 +287,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 				handles[i] = Chan->GetHandle();
                 ++i;
 			}
+            if (i != HandlesUsed)
+                MCAError::Warn("mcainfo: Got %d, expected %d PVs\n",
+                               i, HandlesUsed);        
 		}
 		else
         {

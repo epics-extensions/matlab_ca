@@ -18,7 +18,7 @@ static char *mxStrDup(const char *s)
 
 Channel::Channel(const ChannelAccess *CA, const char *Name)
     : CA(CA),
-      Handle(++NextHandle),
+      Handle(NextHandle++),
       PVName(mxStrDup(Name)),
       ChannelID(0),
       EventID(0),
@@ -44,9 +44,10 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
     status = CA->WaitForSearch();
     if (status != ECA_NORMAL)
     {
-        MCAError::Error("WaitForSearch: %s\n", ca_message(status));
+        MCAError::Warn("WaitForSearch: %s\n", ca_message(status));
         ca_clear_channel(ChannelID);
         ChannelID = 0;
+        Handle = 0;
         return;
     }
 
