@@ -14,6 +14,11 @@ error:
   crash-on-exit:
   In mca_cleanup, the 'iterator' would use the node that
   was just deleted to get the 'next' node.
+- Increased the default search timeout from 1 to 10 seconds.
+- Online help for mcainfo and mcastate was wrong:
+  Closed channels are simply gone. They don't show up
+  in the mcastate or mcainfo lists at all,
+  so they also don't show up as 'closed'.
 
 * V 3.2 - Kay Kasemir, June 30 2006
 steven.banks@synchrotron.vic.gov.au emailed a snapshot

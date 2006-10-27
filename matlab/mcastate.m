@@ -17,8 +17,7 @@ function varargout = mcastate(varargin);
 % Possible values
 % 1 - Connected: MCAGET, MCAPUT and MCAMON are valid
 % 0 - Disconnected: MCAGET, MCAPUT and MCAMON will return invalid
-%     data or fail. This may be due to a server/network problem or
-%     if the channel was previously closed by the user with MCACLOSE
+%     data or fail. This may be due to a server/network problem
 %
 % See also MCAINFO, MCAOPEN, MCACLOSE.
 

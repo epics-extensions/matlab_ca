@@ -17,7 +17,7 @@ if info.PVName ~= 'fred'
 end
 
 mcamon(fred)
-fprintf(1, 'Waiting for monitors...\n', vals);
+fprintf(1, 'Waiting for monitors...\n');
 pause(2)
 vals = mcamonevents(fred);
 fprintf(1, 'Received %d values for fred\n', vals);

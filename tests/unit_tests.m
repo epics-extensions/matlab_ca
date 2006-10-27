@@ -20,7 +20,7 @@ end
 
 function testCheckDefaultTimeouts
 t = mcatimeout;
-assertEquals('default search timeout', 1.0, t(1), 0.01); 
+assertEquals('default search timeout', 10.0, t(1), 0.01); 
 assertEquals('default get timeout', 5.0, t(2), 0.01); 
 assertEquals('default put timeout', 0.01, t(3), 0.01);
 
@@ -78,5 +78,13 @@ pv = mcaopen('fred');
 val = mcaget(pv);
 mcaclose(pv);
 
+
+function testState
+names={'fred', 'janet'};
+pvs = mcaopen(names);
+assertEquals('connected', 1, mcastate(pvs(1)));
+assertEquals('connected', 1, mcastate(pvs(2)));
+% hard to test 'disconnected' without stopping the CA server...
+mcaclose(pvs);
 
 

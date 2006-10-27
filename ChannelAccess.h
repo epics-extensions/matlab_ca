@@ -65,7 +65,7 @@ public:
     {   return ca_pend_io(MCA_PUT_TIMEOUT); }
 
 private:
-    static const double DEFAULT_SEARCH_TIMEOUT = 1.0;
+    static const double DEFAULT_SEARCH_TIMEOUT = 10.0;
     static const double DEFAULT_GET_TIMEOUT = 5.0;
     static const double DEFAULT_PUT_TIMEOUT = 0.01;
 

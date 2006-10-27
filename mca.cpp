@@ -267,10 +267,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAINFO - Returns two lists:
-	//				a) A double matrix of handles of PVs
-	//              b) Channel information as a MATLAB structure array
-	case 10:
+	case 10:    // MCAINFO - Returns two lists:
+                //              a) A double matrix of handles of PVs
+                //              b) Channel information as a MATLAB structure array
 	{
 		int HandlesUsed = ChannelTable.size();
 		if (HandlesUsed > 0)
@@ -303,8 +302,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAINFO - Returns Channel information for one Channel
-	case 11:
+	case 11:    // MCAINFO - Returns Channel information for one Channel
 	{
 		int Handle = (int) mxGetScalar(prhs[1]);
 		Channel *Chan = ChannelTable.find(Handle);
@@ -318,83 +316,75 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-        // MCASTATE - return an array of status for all open channels
-        //            (1 - OK, 0 - disconnected or cleared)
-        //
-        case 12:
+    // MCASTATE(no args) - return array (pv, states) of status for all open channels
+    //            (1 - OK, 0 - disconnected)
+    case 12:
+    {
+        int HandlesUsed = ChannelTable.size();
+        // Matrix of handles of connected PVs
+        plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+        double *myDblPr0 = mxGetPr(plhs[0]);
+
+        // Matrix of states of connected PVs
+        plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+        double *myDblPr1 = mxGetPr(plhs[1]);
+
+        // Loop through all the open channels
+        if (nrhs == 1)
         {
-                int HandlesUsed = ChannelTable.size();
-
-                // Matrix of handles of connected PVs
-                plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
-                double *myDblPr0 = mxGetPr(plhs[0]);
-
-                // Matrix of states of connected PVs
-                plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
-                double *myDblPr1 = mxGetPr(plhs[1]);
-
-                // Loop through all the open channels
-                if (nrhs == 1)
-                {
-                    if (HandlesUsed > 0)
-                    {
-                        ChannelHash::Iterator iter(ChannelTable);   
-                        Channel *Chan = iter.getValue();
-                        int i = 0;
-                        while (Chan)
-                        {
-                            myDblPr0[i] = (double)(Chan->GetHandle());
-                            myDblPr1[i] = (double)(Chan->GetState() == 2);
-                            ++i;
-                            Chan = iter.next();
-                        }
-                    }
-                    else
-                    {
-                        mexWarnMsgTxt("No connected PVs found");
-                        plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
-                        plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
-                    }
-                }
-
-                break;
-        }
-
-        // MCASTATE - return an array of status for specified channels
-        //            (1 - OK, 0 - disconnected or cleared)
-        case 13:
-        {
-            int HandlesUsed = nrhs - 1;
-
-            // Matrix of states of connected PVs
-            plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
-            double *myDblPr = mxGetPr(plhs[0]);
-            // Only loop through the supplied channels
-            for (int i = 0; i < HandlesUsed; i++)
+            if (HandlesUsed > 0)
             {
-                    int Handle = (int) mxGetScalar(prhs[i + 1]);
-                    Channel *Chan = ChannelTable.find(Handle);
-                    if (!Chan)
-                        MCAError::Error("mcastate(%): Invalid handle.", Handle);
-
-                    myDblPr[i] = (double)(Chan->GetState() == cs_conn);
+                ChannelHash::Iterator iter(ChannelTable);   
+                Channel *Chan = iter.getValue();
+                int i = 0;
+                while (Chan)
+                {
+                    myDblPr0[i] = (double)(Chan->GetHandle());
+                    myDblPr1[i] = (double)(Chan->GetState() == 2);
+                    ++i;
+                    Chan = iter.next();
+                }
             }
-            break;
+            else
+            {
+                mexWarnMsgTxt("No connected PVs found");
+                plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
+                plhs[1] = mxCreateDoubleMatrix(0, 0, mxREAL);
+            }
         }
+        break;
+    }
 
-	// MCAPOLL - Poll Channel Access
-	//
-	case 30:
-	{
+    // MCASTATE(pv, pv, ...) - return an array of status for specified channels
+    //                         (1 - OK, 0 - disconnected)
+    case 13:
+    {
+        int HandlesUsed = nrhs - 1;
+
+        // Matrix of states of connected PVs
+        plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
+        double *myDblPr = mxGetPr(plhs[0]);
+        // Only loop through the supplied channels
+        for (int i = 0; i < HandlesUsed; i++)
+        {
+                int Handle = (int) mxGetScalar(prhs[i + 1]);
+                Channel *Chan = ChannelTable.find(Handle);
+                if (!Chan)
+                    MCAError::Error("mcastate(%d): Invalid handle.", Handle);
+
+                myDblPr[i] = (double)(Chan->GetState() == cs_conn);
+        }
+        break;
+    }
+
+	case 30:    // MCAPOLL - Poll Channel Access
 		ca_poll();
 		break;
-	}
 
 	// MCAGET - Get PV Values by their MCA Handles
 	//
 	case 50:
 	{
-
 		int i, j;
 
 		for (i = 0; i < nrhs - 1; i++) {

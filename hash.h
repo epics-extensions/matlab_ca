@@ -40,10 +40,6 @@ private:
 	IntHashNode<T> *next;
 };
 
-// forward
-template<class T>
-class IntHashIterator;
-
 /** Hash, mapping integer keys to 'T' pointers. */ 
 template<class T>
 class IntHash

@@ -18,18 +18,16 @@ function varargout = mcainfo(varargin);
 %       INFO is a structure array of inoformation on the PV in the
 %            same format as above
 %
-% Note: A channel may become disconnected for two reasons:
-%   1. (Temporary) Due to a server or network problem. This will be reflected in 
-%   MCAMessage field. Any attempts to read, write or monitor this channel
-%   will return an error. CA library will periodically attempt to reestablish
-%   connection without any action required from the user.
-%   2. (Permanent) When the connection is closed by the user with MCACLOSE. 
+% Note: A channel may become disconnected
+% due to a server or network problem. This will be reflected in 
+% MCAMessage field. Any attempts to read, write or monitor this channel
+% will return an error. CA library will periodically attempt to reestablish
+% connection without any action required from the user.
+% When the connection is closed by the user with MCACLOSE,
+% that PV handle becomes invalid, and attempts to call MCAINFO
+% will result in an error. 
 %   
-% Note: Some of these fields become unavailable when a channel 
-%   becomes temporarily disconnected or cleared by the user.
-%   In this case 0 or 'unknown' is returned
-%
-%   See also: MCAOPEN MCACLOSE
+% See also: MCAOPEN MCACLOSE MCASTATE
 
 if nargin>0
     if ischar(varargin{1})
