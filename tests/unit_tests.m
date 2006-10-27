@@ -90,9 +90,35 @@ mcaclose(pvs);
 function testBasicGet
 pv = mcaopen('fred');
 val = mcaget(pv);
-mcaclose(pv);
 pv = mcaopen('alan');
 val = mcaget(pv);
 assertTrue('got array', length(val) > 1);
+
+function testGetTypes
+% Double
+pv = mcacheckopen('fred');
+val = mcaget(pv);
+info = mcainfo(pv);
+assertEquals('double', 'DOUBLE', info.NativeType);
+assertTrue('got scalar', length(val) == 1);
+mcaclose(pv);
+% Array
+pv = mcacheckopen('alan');
+val = mcaget(pv);
+info = mcainfo(pv);
+assertEquals('double', 'DOUBLE', info.NativeType);
+assertTrue('got array', length(val) > 1);
+mcaclose(pv);
+% String
+pv = mcacheckopen('ramp.DESC');
+val = mcaget(pv);
+info = mcainfo(pv);
+assertEquals('double', 'STRING', info.NativeType);
+mcaclose(pv);
+% Enum
+pv = mcacheckopen('ramp.SCAN');
+val = mcaget(pv);
+info = mcainfo(pv);
+assertEquals('double', 'ENUM', info.NativeType);
 mcaclose(pv);
 
