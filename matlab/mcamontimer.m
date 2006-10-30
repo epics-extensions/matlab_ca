@@ -11,7 +11,8 @@ function varargout = mcamontimer(varargin)
 % Notes: 
 % (1) If monitors are installed using mcamon but mcaTimer has not been
 %     started, the monitor events will queue up indefinitely.  There is
-%     no limit to the size of the queue.
+%     no limit to the size of the queue, so eventually you will
+%     run out of memory and crash.
 % (2) A polling period of 0.1 seconds is used.  This may be varied if
 %     desired by modifying the 'Period' argument in the definition of
 %     mcaTimer.

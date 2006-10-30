@@ -652,20 +652,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAMON - get info on installed monitors.
-	//
-	case 500:
+	case 500:    // MCAMON - get info on installed monitors.
 	{
 		int i, MonitorsInstalled = 0;
-		int HandlesUsed;
-		int *HandleArray;
-		double *myDblPr;
 
 		// Get the total number of defined channels and create an array
 		// to hold the handles of those that have installed monitors.
-		//
-		HandlesUsed = ChannelTable.size();
-		HandleArray = (int *) mxCalloc(HandlesUsed, sizeof(int));
+		int HandlesUsed = ChannelTable.size();
+		int *HandleArray = (int *) mxCalloc(HandlesUsed, sizeof(int));
 
 		// Iterate through all the defined channels and add their
 		// handles into the array if they have monitors defined.
@@ -677,31 +671,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 				HandleArray[MonitorsInstalled++] = Chan->GetHandle();
             Chan = iter.next();
 		}
-
 		if (MonitorsInstalled > 0)
         {
 			// An array of the handles of channels with installed monitors.
 			plhs[0] = mxCreateDoubleMatrix(1, MonitorsInstalled, mxREAL);
-			myDblPr = mxGetPr(plhs[0]);
-
+            double *handles = mxGetPr(plhs[0]);
 			// An array of the monitor strings for each installed monitor.
 			plhs[1] = mxCreateCellMatrix(1, MonitorsInstalled);
-
-			// Fill up the arrays.
 			for (i = 0; i < MonitorsInstalled; i++)
             {
 				Chan = ChannelTable.find(HandleArray[i]);
-				myDblPr[i] = (double) HandleArray[i];
+                if (! Chan)
+                    MCAError::Error("Internal error, mcamon cannot find channel for handle %d\n",
+                                    HandleArray[i]);    
+				handles[i] = (double) HandleArray[i];
 				mxSetCell(plhs[1], i, mxCreateString(Chan->GetMonitorString()));
 			}
 		}
-		else {
+		else
+        {
 			plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
 			plhs[1] = mxCreateCellMatrix(0, 0);
-		
 		}
 		mxFree (HandleArray);
-
 		break;
 	}
 
@@ -728,23 +720,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	// MCAEXEC - Execute the command strings for the channels in
 	//			 the monitor queue
-	//
 	case 600:
 	{
         int Handle;
-		while((Handle = MonitorQueue.remove()) != 0)
+		while ((Handle = MonitorQueue.remove()) != 0)
         {
 			// Find the channel.  If it still exists, execute its 
 			// command string (if it has one.)
 			Channel *Chan = ChannelTable.find(Handle);
-			if (Chan)
+			if (!Chan)
             {
-				if (Chan->MonitorStringInstalled())
-                {
-					const char* MonitorString = Chan->GetMonitorString();
+				const char* MonitorString = Chan->GetMonitorString();
+                if (MonitorString)
 					mexEvalString(MonitorString);
-				}
 			}
+            else
+                MCAError::Warn("MCA Timer: internal error, unknown handle %d\n",
+                               Handle);
 		}
 		break;
 	}

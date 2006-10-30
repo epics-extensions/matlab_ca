@@ -4,7 +4,7 @@ persistent CAHandle figHandle valueBoxHandle
 
 if nargin == 0   
     
-    PV = 'epicsadminHost:aiExample';
+    PV = 'ramp';
     
     % Graphics
     %
@@ -83,6 +83,11 @@ if nargin == 0
         if ~sts
             errordlg('Unable to create monitor.')
         end
+    end
+    
+    
+    if mcamontimer() == 0
+        mcamontimer('start');
     end
 else
     switch varargin{1}

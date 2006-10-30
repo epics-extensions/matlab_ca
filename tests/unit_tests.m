@@ -10,6 +10,7 @@ tests = str2func(suite([mfilename '.m']));
 function testVersion
 assertEquals('Version test', '4.0', mcaversion); 
 
+%
 function testNonsense
 try
    mca(9875);
@@ -18,12 +19,14 @@ try
 catch
 end
 
+%
 function testCheckDefaultTimeouts
 t = mcatimeout;
 assertEquals('default search timeout', 10.0, t(1), 0.01); 
 assertEquals('default get timeout', 10.0, t(2), 0.01); 
 assertEquals('default put timeout', 10.0, t(3), 0.01);
 
+%
 function testSetCustomTimeouts
 mcatimeout('open', 5);
 mcatimeout('get', 6);
@@ -34,6 +37,7 @@ assertEquals('custom get timeout', 6.0, t(2), 0.01);
 assertEquals('custom put timeout', 7.01, t(3), 0.01);
 mcaexit;
 
+%
 function testOneOpenClose
 pv = mcaopen('fred');
 [h, names] = mcaopen;
@@ -48,6 +52,7 @@ mcaclose(pv);
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));
 
+%
 function testMutipleOpenClose
 [pv, pv2] = mcaopen('fred', 'janet');
 [h, names] = mcaopen;
@@ -68,6 +73,7 @@ assertEquals('isopen', 0, mcaisopen('fred'));
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));
 
+%
 function testCellOpenClose
 names={'fred', 'janet'};
 pvs = mcaopen(names);
@@ -79,6 +85,7 @@ mcaclose(pvs);
 [h, names] = mcaopen;
 assertEquals('No more channels', 0, length(h));
 
+%
 function testState
 names={'fred', 'janet'};
 pvs = mcaopen(names);
@@ -87,6 +94,7 @@ assertEquals('connected', 1, mcastate(pvs(2)));
 % hard to test 'disconnected' without stopping the CA server...
 mcaclose(pvs);
 
+%
 function testBasicGet
 pv = mcaopen('fred');
 val = mcaget(pv);
@@ -94,6 +102,7 @@ pv = mcaopen('alan');
 val = mcaget(pv);
 assertTrue('got array', length(val) > 1);
 
+%
 function testGetTypes
 % Double
 pv = mcacheckopen('fred');
@@ -122,6 +131,7 @@ info = mcainfo(pv);
 assertEquals('double', 'ENUM', info.NativeType);
 mcaclose(pv);
 
+%
 function testGetMultiple
 names={'fred', 'janet'};
 pvs = mcaopen(names);
@@ -131,6 +141,7 @@ vals = mcaget(pvs);
 assertEquals('got array', 2, length(vals));
 mcaclose(pvs);
 
+%
 function testGetTimes
 names={'fred', 'janet'};
 pvs = mcaopen(names);
@@ -144,6 +155,7 @@ datestr(t1);
 datestr(t2);
 mcaclose(pvs);
 
+%
 function testAlarm
 % 'ramp' should go in and out of MAJOR/HIGH alarm...
 pv = mcacheckopen('ramp');
@@ -207,6 +219,7 @@ catch
 	assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
 end
 
+%
 function testPutTimeout
 mcatimeout('put', 0.000001);
 p1 = mcacheckopen('set1');
@@ -215,6 +228,7 @@ mcatimeout('put', 10.0);
 assertEquals('Got OK', 1, mcaput(p1, 10));
 mcaclose(p1);
 
+%
 function testPutStrings
 p1 = mcacheckopen('set1.DESC');
 assertEquals('Got OK', 1, mcaput(p1, 'Some Text'));
@@ -235,6 +249,7 @@ catch
 end
 mcaclose(p1);
 
+%
 function testPutCell
 p1 = mcacheckopen('set1');
 p2 = mcacheckopen('set1.DESC');
@@ -243,10 +258,24 @@ assertEquals('Readback matches', 42, mcaget(p1));
 assertEquals('Readback matches', 'Description', mcaget(p2));
 mcaclose(p2, p1);
 
+% Does this crash IOCs??
+%p1 = mcaopen('set1');
+%p2 = mcaopen('set1.DESC');
+%mcaput(p1, 42);
+%mcaput(p2, 'Description');
+%mcaclose(p2);
+%mcaclose(p1);
+
+
+%
 function testSimpleMonitor
 p1 = mcacheckopen('ramp');
 % 'Default' callback
 assertEquals('Start monitor', 1, mcamon(p1));
+[h, cb] = mcamon;
+assertEquals('Monitor info count', 1, length(h));
+assertEquals('Monitor handle', p1, h);
+assertEquals('Monitor callback', 0, length(cb{1}));
 disp('Wait for events');
 pause(2);
 assertTrue('Got values', mcamonevents(p1) > 0);
@@ -262,3 +291,23 @@ assertEquals('No more events', 0, mcamonevents(p1));
 pause(2);
 assertEquals('No more events', 0, mcamonevents(p1));
 mcaclose(p1);
+
+%
+function testMonitorCallback
+global v
+v = [];
+p1 = mcacheckopen('ramp');
+cmd = sprintf('global v; v=[v mcacache(%d)]', p1);
+assertEquals('Start monitor', 1, mcamon(p1, cmd));
+[h, cb] = mcamon;
+mcamontimer('start');
+assertEquals('Monitor info count', 1, length(h));
+assertEquals('Monitor handle', p1, h);
+assertEquals('Monitor callback', cmd, cb{1});
+disp('Wait for values');
+pause(5);
+mcaclearmon(p1);
+mcamontimer('stop');
+assertTrue('Got value', length(v) > 2);
+mcaexit;
+
