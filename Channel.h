@@ -14,9 +14,10 @@ public:
 	virtual ~Channel();
 
 	int GetHandle() const
-    {   return (Handle); }
+    {   return Handle; }
     
-	chid GetChannelID() const;
+	chid GetChannelID() const
+    {   return ChannelID;  }
     
 	char* GetPVName() const
     {   return PVName; }
@@ -31,9 +32,14 @@ public:
 	int GetState () const
     {   return ChannelID ? ca_state(ChannelID) : cs_never_conn; }
     
-	int GetNumElements () const;
-	chtype GetRequestType() const;
-	const char* GetRequestTypeStr() const;
+    
+    int GetNumElements () const
+    {   return NumElements; }
+
+    chtype GetRequestType () const
+    {   return (RequestType); }
+    
+    const char* GetRequestTypeStr() const;
     
     /** @returns True if value is numeric, i.e. anything but string.
      *  @see #GetNumericValue()
@@ -69,17 +75,8 @@ public:
      */    
 	const char* GetStringValue ( int ) const;
 	
-
-
-	// These methods must be used in combination:
-	//
-	// 1) SetNumericValue - must be called first if IsNumeric() returns True
-	// 2) SetStringValue - must be called first if IsNumeric() returns False
-	// 3) PutValueToCA - must be called next to send the value to CA
-	// 4) SetLastPutStatus - must be called in PutValueToCA callback
-	// 5) GetLastPutStatus - must be called last to determine if the Put succeeded
-	//
 	void SetNumericValue( int, double );
+
 	void SetStringValue ( int, char* );
     
     /** Issue CA put callback, wait for result within timeout.
@@ -92,14 +89,27 @@ public:
      */
 	bool PutValueToCA ( int ) const;
 
-	void SetMonitorString( const char*, int );
-	bool MonitorStringInstalled() const;
-	const char* GetMonitorString() const;
-	void ClearMonitorString();
-	void LoadMonitorCache( struct event_handler_args arg );
-	int AddEvent( caEventCallBackFunc * );
-	bool EventInstalled() const;
-	void ClearEvent();
+    /** Set the Matlab command to invoke on incoming monitors. */
+	void SetMonitorString(const char *MonString);
+
+    /** Clear the Matlab command to invoke on incoming monitors. */
+    void ClearMonitorString();
+    
+	bool MonitorStringInstalled() const
+    {   return MonitorCBString != 0;  }
+
+    const char *GetMonitorString() const
+    {   return MonitorCBString; }
+
+    void LoadMonitorCache( struct event_handler_args arg );
+	
+    int AddEvent(caEventCallBackFunc *MonitorEventHandler);
+    
+    bool EventInstalled() const
+    {  return EventID != 0; }
+
+    
+    void ClearEvent();
 
 	
     int GetEventCount() const
@@ -111,9 +121,17 @@ public:
     void ResetEventCount()
     {  EventCount = 0; }
 
-    
+    /** Lock and obtain the cache for monitored values.
+     *  @see #ReleaseMonitorCache()
+     */
+	const mxArray *LockMonitorCache()
+    {   
+        cache_lock.lock();
+        return Cache;
+    }
 
-	const mxArray *GetMonitorCache() const;
+    void ReleaseMonitorCache()
+    {   cache_lock.unlock();  }
 
 private:
     Channel(); // don't use
@@ -143,7 +161,9 @@ private:
     epicsEvent put_completed;
     bool last_put_ok;
 
+    epicsMutex cache_lock;
 	mxArray* Cache;
+    
 	int EventCount;
 };
 

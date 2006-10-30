@@ -62,6 +62,9 @@ In addition, this was changed:
   mcaput didn't give any error when writing strings to non-string PVs
   and vice versa.
   
+- monitor for 'STRING' PVs didn't update the alarm status/severity.
+- added a mutex for the monitor cache, since both the monitor callback
+  and matlab access it concurrently.
 - Arranged files in subdirectories.
 - Added unit tests.
 - Replaced ChannelAccess.cpp by inlines, no more IsInitialized() checks needed

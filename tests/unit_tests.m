@@ -171,6 +171,7 @@ while i<10
 	i=i+1;
 end
 assertTrue('found major severity', i<10);
+mcaclose(pv);
 
 % These end up in mca(80, ...)
 function testArrayput
@@ -241,3 +242,23 @@ mcaput({p1, p2}, { 42, 'Description' });
 assertEquals('Readback matches', 42, mcaget(p1));
 assertEquals('Readback matches', 'Description', mcaget(p2));
 mcaclose(p2, p1);
+
+function testSimpleMonitor
+p1 = mcacheckopen('ramp');
+% 'Default' callback
+assertEquals('Start monitor', 1, mcamon(p1));
+disp('Wait for events');
+pause(2);
+assertTrue('Got values', mcamonevents(p1) > 0);
+mcacache(p1);
+% Should be 0, maybe 1 if we just received another one now
+assertTrue('Cleared event counts', mcamonevents(p1) < 2);
+pause(2);
+assertTrue('Got values', mcamonevents(p1) > 0);
+mcaclearmon(p1);
+mcacache(p1);
+% Should be 0, with no more arriving
+assertEquals('No more events', 0, mcamonevents(p1));
+pause(2);
+assertEquals('No more events', 0, mcamonevents(p1));
+mcaclose(p1);

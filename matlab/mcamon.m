@@ -5,7 +5,6 @@ function varargout = mcamon(handle,varargin)
 %   Default callback updates local copy of the channel data
 %   every time the data changes on the server.
 %   This cached data can be read at later time into MATLAB with MCACACHE.
-%   Default callback runs ones immediately after installing a monitor.
 %   HANDLE - integer handle to a channel previously opened with MCAOPEN
 %   Returns 1 on success, 0 on failure
 % 
@@ -24,7 +23,7 @@ function varargout = mcamon(handle,varargin)
 %    the MATLAB timer which polls and processes the outstanding MCA Monitor
 %    callback queue.
 % 
-% Notes  Use of asynchronous features of EPICS (such as monitors) 
+% Note:  Use of asynchronous features of EPICS (such as monitors) 
 %    with MATLAB requires special care - read MCA notes.
 %   
 %    1.In CA client library (EPICS R3.13.4) asynchronous callbacks run one at a time
@@ -34,7 +33,6 @@ function varargout = mcamon(handle,varargin)
 %    MCAMON(H1, X='MCACACHE(H2);') is OK since MCACACHE does not use CA library. 
 %
 % See also MCAMONTIMER, MCACACHE, MCAGET, MCACLEARMON.
-%
 
 if nargin ==1
     varargout{1}=mca(100,handle);

@@ -29,9 +29,47 @@ static ChannelAccess *CA = 0;
 typedef IntHash<Channel> ChannelHash;
 static ChannelHash ChannelTable;
 
-static epicsMutex mutex;
-static Queue<int> MonitorQueue;
+class MonitorQueue
+{
+public:
+    void clear()
+    {
+        mutex.lock();
+        while(!MonitorQueue.IsEmpty())
+            MonitorQueue.Dequeue();
+        mutex.unlock();
+    }
 
+    void add(int handle)
+    {
+        if (handle == 0)
+        {
+            mexPrintf("MCA: internal error, tried to add handle 0 to MonitorQueue\n");
+            return;
+        }
+        mutex.lock();
+        MonitorQueue.Enqueue(handle);
+        mutex.unlock();
+    }
+        
+    int remove()
+    {
+        int result;
+        mutex.lock();
+        if (MonitorQueue.IsEmpty())
+            result = 0;
+        else
+            result = MonitorQueue.Dequeue();
+        mutex.unlock();
+        return result;
+    }
+        
+private:
+    epicsMutex mutex;
+    Queue<int> MonitorQueue;
+};
+
+static MonitorQueue MonitorQueue;
 
 static int addChannel(const char *name)
 {
@@ -68,34 +106,22 @@ void mca_cleanup()
 	}
     
 	// Empty the Monitor Command Queue
-	mutex.lock();
-	while(!MonitorQueue.IsEmpty())
-		MonitorQueue.Dequeue();
-	mutex.unlock();
+    MonitorQueue.clear();
     delete CA;
     CA = 0;
 }
 
-void mcaMonitorEventHandler( struct event_handler_args arg )
+void monitor_callback( struct event_handler_args arg )
 {
-	// The channel object passed in by the ca_add_event call.
 	Channel *Chan = (Channel *) arg.usr;
+    // mexPrintf("monitor_callback(%s) ...\n", Chan->GetPVName());
 
-	// Load the Channel's cache.
 	Chan->LoadMonitorCache(arg);
-
-	// Count the number of outstanding events
 	Chan->IncrementEventCount();
-
 	// If a monitor string is installed, store the channel's
 	// handle in the queue for subsequent timer-initiated execution.
-	//
 	if (Chan->MonitorStringInstalled())
-    {
-		mutex.lock();
-		MonitorQueue.Enqueue(Chan->GetHandle());
-		mutex.unlock();
-	}
+        MonitorQueue.add(Chan->GetHandle());
 }
 
 // Helper for mcainfo, fills one row in array with info for channel
@@ -554,136 +580,74 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAMON - install a monitor
-	//
-	case 100:
+	case 100:    // MCAMON - install a monitor
 	{
-
+        // Find the channel with the specified handle
 		int Handle = (int) mxGetScalar(prhs[1]);
-	
-		// Find the channel with the specified handle
-		//
 		Channel *Chan = ChannelTable.find(Handle);
 		if (!Chan)
              MCAError::Error("mcamon(%d): Invalid handle.", Handle);
 
-		// If a monitor event is installed, then just replace the monitor string.
-		//
-		if (Chan->EventInstalled()) {
-
-			// Clear old monitor callback string
-			//
+        mexPrintf("mcamon(%s)...\n", Chan->GetPVName());
+        bool OK = true;
+		// If a third argument is specified
+		if (nrhs > 2)
+        {	// If the third argument is a string
+			if (mxIsChar(prhs[2]))
+            {
+				// Create the new monitor callback string
+				int buflen = mxGetM(prhs[2]) * mxGetN(prhs[2]) + 1;
+				char *CBString = (char *)mxMalloc(buflen);
+				mxGetString(prhs[2], CBString, buflen);
+				Chan->SetMonitorString(CBString);
+				mxFree(CBString);
+			}
+			else
+				MCAError::Error("mcamon(%s): Third argument must be a string.\n",
+                                Chan->GetPVName());
+		}
+		else // Make sure the monitor string is cleared.
 			Chan->ClearMonitorString();
 
-			// If a third argument is specified
-			//
-			if (nrhs > 2) {
-				
-				// If the third argument is a string
-				//
-				if (mxIsChar(prhs[2])) {
-
-					// Create the new monitor callback string
-					//
-					int buflen = mxGetM(prhs[2]) * mxGetN(prhs[2]) + 1;
-
-					char *CBString = (char *)mxMalloc(buflen);
-					mxGetString(prhs[2], CBString, buflen);
-					Chan->SetMonitorString(CBString, buflen);
-					mxFree(CBString);
-
-				}
-				else
-					MCAError::Error("Third argument to mcamon must be a string.");
-			}
-			plhs[0] = mxCreateScalarDouble(1);
-
+        if (! Chan->EventInstalled())
+        {   // Subscribe, but only once!
+			int status = Chan->AddEvent(monitor_callback);
+			if (status == ECA_NORMAL)
+				CA->Flush();
+			else // AddEvent should already have bailed out by now...
+                OK = false;
 		}
-
-		// There is no monitor installed.  Create the monitor string
-		// and then register the event.
-		//
-		else {
-
-			// If a third argument is specified
-			//
-			if (nrhs > 2) {
-				
-				// If the third argument is a string
-				//
-				if (mxIsChar(prhs[2])) {
-
-					// Create the new monitor callback string
-					//
-					int buflen = mxGetM(prhs[2]) * mxGetN(prhs[2]) + 1;
-
-					char *CBString = (char *)mxMalloc(buflen);
-					mxGetString(prhs[2], CBString, buflen);
-					Chan->SetMonitorString(CBString, buflen);
-					mxFree(CBString);
-
-				}
-				else
-					MCAError::Error("Third argument to mcamon must be a string.");
-			}
-			else
-
-				// Make sure the monitor string is cleared.
-				//
-				Chan->ClearMonitorString();
-
-			int status = Chan->AddEvent(mcaMonitorEventHandler);
-			if (status == ECA_NORMAL) {
-				ca_poll();
-				plhs[0] = mxCreateScalarDouble(1);
-			}
-			else
-				plhs[0] = mxCreateScalarDouble(0);
-		}
+        plhs[0] = mxCreateScalarDouble(OK ? 1.0 : 0.0);
 		break;
 	}
 
-	// MCACLEARMON - clears a monitor
-	//
-	case 200:
+	case 200:    // MCACLEARMON - clears a monitor
 	{
 		int Handle = (int) mxGetScalar(prhs[1]);
-	
-		// Find the channel with the specified handle
-		//
 		Channel *Chan = ChannelTable.find(Handle);
 		if (!Chan)
             MCAError::Error("mcaclearmon(%d): Invalid handle.", Handle);
-
 		Chan->ClearEvent();
-		
 		break;
 	}
 
-	// MCACACHE - get the cached values of a monitored PV
-	//
-	case 300:
+	case 300:    // MCACACHE - get the cached values of a monitored PV
 	{
-		int Handle;
-		const mxArray *Cache;
-
-		for (int i = 0; i < nrhs - 1; i++) {
-
-			Handle = (int) mxGetScalar(prhs[i + 1]);
-			
-			// Find the channel with the specified handle
-			//
+		for (int i = 0; i < nrhs - 1; i++)
+        {
+            // Find the channel with the specified handle
+			int Handle = (int) mxGetScalar(prhs[i + 1]);
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcacache(%d): Invalid handle.", Handle);
-
-			Cache = Chan->GetMonitorCache();
+    
+            const mxArray *Cache = Chan->LockMonitorCache();
 			if (Cache)
 				plhs[i] = mxDuplicateArray(Cache);
 			else
 				plhs[i] = mxCreateDoubleMatrix(0, 0, mxREAL);
+            Chan->ReleaseMonitorCache();
 			Chan->ResetEventCount();
-
 		}
 		break;
 	}
@@ -741,26 +705,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		break;
 	}
 
-	// MCAMONEVENTS - Event count for monitors
-	//
-	case 510:
+	case 510:    // MCAMONEVENTS - Event count for monitors
 	{
-		double *myDblPr0;
-		double *myDblPr1;
 		int HandlesUsed = ChannelTable.size();
-
 		plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
-		myDblPr0 = mxGetPr(plhs[0]);
+		double *handles = mxGetPr(plhs[0]);
 		plhs[1] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
-		myDblPr1 = mxGetPr(plhs[1]);
+		double *counts = mxGetPr(plhs[1]);
 
 		ChannelHash::Iterator iter(ChannelTable);	
 		Channel *Chan = iter.getValue();
         int i = 0;
         while (Chan)
         {
-			myDblPr0[i] = Chan->GetHandle();
-			myDblPr1[i] = Chan->GetEventCount();
+			handles[i] = Chan->GetHandle();
+			counts[i] = Chan->GetEventCount();
             ++i;
             Chan = iter.next();
 		}
@@ -772,11 +731,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	//
 	case 600:
 	{
-		mutex.lock();
-		while(!MonitorQueue.IsEmpty())
+        int Handle;
+		while((Handle = MonitorQueue.remove()) != 0)
         {
-			int Handle = MonitorQueue.Dequeue();
-			mutex.unlock();
 			// Find the channel.  If it still exists, execute its 
 			// command string (if it has one.)
 			Channel *Chan = ChannelTable.find(Handle);
@@ -788,9 +745,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 					mexEvalString(MonitorString);
 				}
 			}
-			mutex.lock();
 		}
-		mutex.unlock();
 		break;
 	}
 

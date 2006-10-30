@@ -84,11 +84,13 @@ Channel::~Channel()
         DataBuffer = 0;
     }
 
+    cache_lock.lock();
 	if (Cache)
     {
 		mxDestroyArray(Cache);
         Cache = 0;
     }
+    cache_lock.unlock();
 }
 
 void Channel::AllocChanMem()
@@ -105,15 +107,18 @@ void Channel::AllocChanMem()
 	mexMakeMemoryPersistent(DataBuffer);
 
 	// Allocate the space for the monitor cache.
+    cache_lock.lock();
 	if (Cache)
 		mxDestroyArray(Cache);
 	if (RequestType == DBR_TIME_STRING)
     {	// Create MATLAB String - originally empty
 		if (NumElements == 1)
 			Cache = mxCreateString("");
-		else {
+		else
+        {
 			Cache = mxCreateCellMatrix(1, NumElements);
-			for (int i = 0; i < NumElements; i++) {
+			for (int i = 0; i < NumElements; i++)
+            {
 				mxArray* mymxArray = mxCreateString("");
 				//mexMakeArrayPersistent(mymxArray);
 				mxSetCell(Cache, i, mymxArray);
@@ -125,14 +130,7 @@ void Channel::AllocChanMem()
 		Cache = mxCreateDoubleMatrix(1, NumElements, mxREAL);
 	}
 	mexMakeArrayPersistent(Cache);
-}
-
-int Channel::GetNumElements () const {
-	return (NumElements);
-}
-
-chtype Channel::GetRequestType () const {
-	return (RequestType);
+    cache_lock.unlock();
 }
 
 bool Channel::IsNumeric() const
@@ -155,12 +153,8 @@ bool Channel::IsNumeric() const
     return false;
 }
 
-chid Channel::GetChannelID() const {
-	return (ChannelID);
-}
-
-const char* Channel::GetRequestTypeStr()  const {
-
+const char* Channel::GetRequestTypeStr()  const
+{
 	const char* ReqString;
 
 	switch (RequestType) {
@@ -191,7 +185,6 @@ const char* Channel::GetRequestTypeStr()  const {
 	}
 
 	return ReqString;
-
 }
 
 void Channel::GetValueFromCA()
@@ -389,125 +382,102 @@ bool Channel::PutValueToCA (int Size) const
  	return true;
 }
 
-void Channel::SetMonitorString(const char* MonString, int buflen) {
-
+void Channel::SetMonitorString(const char* MonString)
+{
 	// If it exists, remove the monitor string.
-	//
-	if (MonitorCBString) {
-		mxFree(MonitorCBString);
-		MonitorCBString = NULL;
-	}
-
-	// Allocate space for the new monitor string.
-	//
-	MonitorCBString = (char*) mxMalloc(buflen);
-	mexMakeMemoryPersistent(MonitorCBString);
-	strcpy(MonitorCBString, MonString);
-
+    ClearMonitorString();
+	MonitorCBString = mxStrDup(MonString);
 }
 
-void Channel::LoadMonitorCache( struct event_handler_args arg ) {
+void Channel::ClearMonitorString() 
+{
+    // If it exists, remove the monitor string.
+    if (MonitorCBString)
+    {
+        mxFree(MonitorCBString);
+        MonitorCBString = NULL;
+    }
+}
 
-	// Pointer to the data associated with the channel.
-	//
+/** Pull the received data out of a monitor callback. */
+void Channel::LoadMonitorCache( struct event_handler_args arg )
+{
+    // This is called from the monitor callback thread.
+    // The Cache is guarded with a lock.
+    // TODO: The timestamps/status/severity should probably also get locked.
+    // Same for the event counters....
 	union db_access_val *pBuf = (union db_access_val *) arg.dbr;
-
 	int i;
-	double *myDblPr;
-	mxArray *mymxArray;
 
 	int Cnt = ca_element_count(ChannelID);
-	if (Cnt > NumElements)
+	if (Cnt > NumElements  ||  arg.type != RequestType)
 		AllocChanMem();
 
-	if (arg.type != RequestType)
-		AllocChanMem();
-
-	if(RequestType == DBR_TIME_STRING) {
-	
-		TimeStamp = ((struct dbr_time_string *) pBuf)->stamp;
-		if (NumElements == 1) {
-
+    // The initial status/severity/stamp of the DBR_TIME_xxx is the same.
+    TimeStamp = ((struct dbr_time_short *) pBuf)->stamp;
+    AlarmStatus = ((struct dbr_time_short *) pBuf)->status;
+    AlarmSeverity = ((struct dbr_time_short *) pBuf)->severity;
+    // Decode the value, which differs for each DBR_TIME_xxx.
+    cache_lock.lock();
+	if (RequestType == DBR_TIME_STRING)
+    {
+		if (NumElements == 1)
+        {
 			mxDestroyArray(Cache);
 			Cache = mxCreateString((char *)((pBuf)->tstrval.value));
 			mexMakeArrayPersistent(Cache);
-
 		}
-		else {
-
-			for (i = 0; i < NumElements; i++) {
-
-				mymxArray = mxGetCell(Cache, i);
+		else
+        {
+			for (i = 0; i < NumElements; i++)
+            {
+                mxArray *mymxArray = mxGetCell(Cache, i);
 				mxDestroyArray(mymxArray);
 				mymxArray = mxCreateString((char *) (&(pBuf->tstrval.value) + i));
 				//mexMakeArrayPersistent(mymxArray);
 				mxSetCell(Cache, i, mymxArray);
-
 			}
 		}
 	}
-	else {
-	
-		myDblPr = mxGetPr(Cache);
-
-		switch (RequestType) {
-		case DBR_TIME_INT:
-			TimeStamp = ((struct dbr_time_short *) pBuf)->stamp;
-			AlarmStatus = ((struct dbr_time_short *) pBuf)->status;
-			AlarmSeverity = ((struct dbr_time_short *) pBuf)->severity;
-			for (i = 0; i < NumElements; i++)
-				myDblPr[i] = (double) (*(&((pBuf)->tshrtval.value) + i));
-			break;
-		case DBR_TIME_FLOAT:
-			TimeStamp = ((struct dbr_time_float *) pBuf)->stamp;
-			AlarmStatus = ((struct dbr_time_float *) pBuf)->status;
-			AlarmSeverity = ((struct dbr_time_float *) pBuf)->severity;
-			for (i = 0; i < NumElements; i++)
-				myDblPr[i] = (double) (*(&((pBuf)->tfltval.value) + i));
-			break;
-		case DBR_TIME_ENUM:
-			TimeStamp = ((struct dbr_time_enum *) pBuf)->stamp;
-			AlarmStatus = ((struct dbr_time_enum *) pBuf)->status;
-			AlarmSeverity = ((struct dbr_time_enum *) pBuf)->severity;
-			for (i = 0; i < NumElements; i++)
-				myDblPr[i] = (double) (*(&((pBuf)->tenmval.value) + i));
-			break;
-		case DBR_TIME_CHAR:
-			TimeStamp = ((struct dbr_time_char *) pBuf)->stamp;
-			AlarmStatus = ((struct dbr_time_char *) pBuf)->status;
-			AlarmSeverity = ((struct dbr_time_char *) pBuf)->severity;
-			for (i = 0; i < NumElements; i++)
-				myDblPr[i] = (double) (*(&((pBuf)->tchrval.value) + i));
-			break;
-		case DBR_TIME_LONG:
-			TimeStamp = ((struct dbr_time_long *) pBuf)->stamp;
-			AlarmStatus = ((struct dbr_time_long *) pBuf)->status;
-			AlarmSeverity = ((struct dbr_time_long *) pBuf)->severity;
-			for (i = 0; i < NumElements; i++)
-				myDblPr[i] = (double) (*(&((pBuf)->tlngval.value) + i));
-			break;
-		case DBR_TIME_DOUBLE:
-			TimeStamp = ((struct dbr_time_double *) pBuf)->stamp;
-			AlarmStatus = ((struct dbr_time_double *) pBuf)->status;
-			AlarmSeverity = ((struct dbr_time_double *) pBuf)->severity;
-			for (i = 0; i < NumElements; i++)
-				myDblPr[i] = (double) (*(&((pBuf)->tdblval.value) + i));
-			break;
-		default:
-			break;
-		}
-	}
+	else
+    {   // Received numeric data
+    	double *myDblPr = mxGetPr(Cache);
+    	switch (RequestType)
+        {
+    	case DBR_TIME_INT:
+    		for (i = 0; i < NumElements; i++)
+    			myDblPr[i] = (double) (*(&((pBuf)->tshrtval.value) + i));
+    		break;
+    	case DBR_TIME_FLOAT:
+    		for (i = 0; i < NumElements; i++)
+    			myDblPr[i] = (double) (*(&((pBuf)->tfltval.value) + i));
+    		break;
+    	case DBR_TIME_ENUM:
+    		for (i = 0; i < NumElements; i++)
+    			myDblPr[i] = (double) (*(&((pBuf)->tenmval.value) + i));
+    		break;
+    	case DBR_TIME_CHAR:
+    		for (i = 0; i < NumElements; i++)
+    			myDblPr[i] = (double) (*(&((pBuf)->tchrval.value) + i));
+    		break;
+    	case DBR_TIME_LONG:
+    		for (i = 0; i < NumElements; i++)
+    			myDblPr[i] = (double) (*(&((pBuf)->tlngval.value) + i));
+    		break;
+    	case DBR_TIME_DOUBLE:
+    		for (i = 0; i < NumElements; i++)
+    			myDblPr[i] = (double) (*(&((pBuf)->tdblval.value) + i));
+    		break;
+    	default:
+            MCAError::Warn("LoadMonitorCache(%s): Unknown type %d\n",
+                           PVName, (int) RequestType);
+    		break;
+    	}
+    }    
+    cache_lock.unlock();
 }
 
-const mxArray *Channel::GetMonitorCache() const {
-	return (Cache);
-}
-
-bool Channel::EventInstalled() const {
-	return (EventID==0?0:1);
-}
-
-int Channel::AddEvent( caEventCallBackFunc *MonitorEventHandler )
+int Channel::AddEvent(caEventCallBackFunc *MonitorEventHandler)
 {
 	int status = ca_add_array_event(RequestType, ca_element_count(ChannelID),
                                     ChannelID,
@@ -519,36 +489,14 @@ int Channel::AddEvent( caEventCallBackFunc *MonitorEventHandler )
 	return status;
 }
 
-void Channel::ClearMonitorString() 
-{
-	// If it exists, remove the monitor string.
-	if (MonitorCBString)
-    {
-		mxFree(MonitorCBString);
-		MonitorCBString = NULL;
-	}
-}
-
 void Channel::ClearEvent()
 {
 	if (!EventID)
         return;
     int status = ca_clear_event(EventID);
+    EventID = 0;
 	if (status != ECA_NORMAL)
-		MCAError::Warn("ca_add_array_event failed.\n");
-
-	EventID = 0;
-
+		MCAError::Warn("ca_clear_event(%s) failed: %s\n",
+                       PVName, ca_message(status));
 	ClearMonitorString();
 }
-
-bool Channel::MonitorStringInstalled() const
-{
-	return MonitorCBString != 0;
-}
-
-const char* Channel::GetMonitorString() const
-{
-	return MonitorCBString;
-}
-
