@@ -29,7 +29,7 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       AlarmSeverity(0),
       NumElements(0),
       RequestType(0),
-      LastPutStatus(0),
+      last_put_ok(false),
       Cache(0)
 {
 	ResetEventCount();
@@ -135,30 +135,24 @@ chtype Channel::GetRequestType () const {
 	return (RequestType);
 }
 
-bool Channel::IsNumeric() const {
-
-	MCAError Err;
-
-	bool Result;
-
-	switch (RequestType) {
+bool Channel::IsNumeric() const
+{
+	switch (RequestType)
+    {
 	case DBR_TIME_STRING:
-		Result = false;
-		break;
+        return false;
 	case DBR_TIME_CHAR:
 	case DBR_TIME_INT:
 	case DBR_TIME_FLOAT:
 	case DBR_TIME_ENUM:
 	case DBR_TIME_LONG:
 	case DBR_TIME_DOUBLE:
-		Result = true;
-		break;
+        return true;
 	default:
-		MCAError::Error("Unimplemented Request Type %d in GetRequestTypeStr().",
-             RequestType);
+		MCAError::Error("IsNumeric(%s): Unimplemented Request Type %d in GetRequestTypeStr().",
+                        PVName, (int) RequestType);
 	}
-
-	return Result;
+    return false;
 }
 
 chid Channel::GetChannelID() const {
@@ -251,56 +245,54 @@ void Channel::GetValueFromCA()
 		break;
 	default:
 		MCAError::Error("GetValueFromCA(%s): Unimplemented Request Type %d\n",
-                        PVName, RequestType);
+                        PVName, (int)RequestType);
 	}
 }
 
-double Channel::GetNumericValue( int Index ) const
+double Channel::GetNumericValue(int Index) const
 {
-	double Val;
-	MCAError Err;
-
-	switch (RequestType) {
+	switch (RequestType)
+    {
 	case DBR_TIME_INT:
-		Val = (double) (*(&(DataBuffer->tshrtval.value) + Index));
+		return (double) (*(&(DataBuffer->tshrtval.value) + Index));
 		break;
 	case DBR_TIME_FLOAT:
-		Val = (double) (*(&(DataBuffer->tfltval.value) + Index));
+		return (double) (*(&(DataBuffer->tfltval.value) + Index));
 		break;
 	case DBR_TIME_ENUM:
-		Val = (double) (*(&(DataBuffer->tenmval.value) + Index));
+		return (double) (*(&(DataBuffer->tenmval.value) + Index));
 		break;
 	case DBR_TIME_CHAR:
-		Val = (double) (*(&(DataBuffer->tchrval.value) + Index));
+		return (double) (*(&(DataBuffer->tchrval.value) + Index));
 		break;
 	case DBR_TIME_LONG:
-		Val = (double) (*(&(DataBuffer->tlngval.value) + Index));
+		return (double) (*(&(DataBuffer->tlngval.value) + Index));
 		break;
 	case DBR_TIME_DOUBLE:
-		Val = (double) (*(&(DataBuffer->tdblval.value) + Index));
+		return (double) (*(&(DataBuffer->tdblval.value) + Index));
 		break;
 	case DBR_TIME_STRING:
-		MCAError::Error("GetNumericValue(%s) cannot return a string value.",
+		MCAError::Error("GetNumericValue(%s) cannot handle string data.",
                         PVName);
+    default:
+        MCAError::Error("GetNumericValue(%s) cannot handle type %d.",
+                        PVName, (int) RequestType);
 	}
-	return Val;
+    return 0.0;
 }
 
 const char* Channel::GetStringValue ( int Index ) const
 {
-	char *Str;
-	MCAError Err;
-
 	switch (RequestType)
     {
 	case DBR_TIME_STRING:
-		Str = (char *)(&(DataBuffer->tstrval.value) + Index);
+		return (char *)(&(DataBuffer->tstrval.value) + Index);
 		break;
 	default:
-		MCAError::Error("GetStringValue(%s) cannot return a string value.",
-                        PVName);
+		MCAError::Error("GetStringValue(%s) cannot decode type %d.",
+                        PVName, (int) RequestType);
 	}
-	return Str;
+	return "";
 }
 
 void Channel::SetNumericValue(int Index, double Value)
@@ -327,66 +319,74 @@ void Channel::SetNumericValue(int Index, double Value)
 		*((dbr_double_t *) (DataBuffer) + Index) = (dbr_double_t) (Value);
 		break;
 	case DBR_STRING:
-		MCAError::Error("SetNumericValue() cannot take a String value.");
+		MCAError::Error("SetNumericValue(%s) cannot take a String value for raw type %d.",
+                        PVName, (int)Type);
 	}
 }
 
-void Channel::SetStringValue ( int Index, char* StrBuffer) {
-
-	MCAError Err;
+void Channel::SetStringValue (int Index, char* StrBuffer)
+{
 
 	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
 
-	switch (Type) {
+	switch (Type)
+    {
 	case DBR_STRING:
 		strcpy((char *)(*((dbr_string_t *)(DataBuffer) + Index)), StrBuffer);
 		break;
 	default:
-		MCAError::Error("SetStringValue() must take a String value.");
+		MCAError::Error("SetStringValue(%s) must take a String value.",
+                        PVName);
 	}
-
 }
 
-void Channel::PutValueToCACallback (int Size, caEventCallBackFunc *PutEventHandler)
+void Channel::put_callback(struct event_handler_args arg)
+{
+    Channel *me = (Channel *) arg.usr;
+    me->last_put_ok = arg.status == ECA_NORMAL;
+    //mexPrintf("put_callback(%s): %s in thread %d...\n",
+    //          me->PVName, (me->last_put_ok ? "OK" : "Error"),
+    //          (unsigned long) epicsThreadGetIdSelf());
+    
+    // Wake waiting PutValueToCACallback()
+    me->put_completed.signal();
+}
+
+double Channel::PutValueToCACallback (int Size)
 {
 	int status;
 
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
-	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer, PutEventHandler, this);
-	if (status != ECA_NORMAL) {
-        MCAError::Error("ca_array_put_callback: %s\n", ca_message(status));
-		LastPutStatus = 0;
+    // Reset status, clear the signal
+    put_completed.tryWait();
+    last_put_ok = false;
+
+    //mexPrintf("PutValueToCACallback(%s), thread %lu...\n",
+    //          PVName, (unsigned long) epicsThreadGetIdSelf());
+	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
+	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
+                                   put_callback, this);
+	if (status != ECA_NORMAL)
+    {
+        MCAError::Error("ca_array_put_callback(%s): %s\n",
+                        PVName, ca_message(status));
+        // We actually won't get here...
+        return 0.0;
 	}
-
-	status = CA->WaitForPut();
-
-	return;
+    CA->Flush();
+    // Wait for response ...
+    if (! put_completed.wait(CA->GetPutTimeout()))
+        return -1.0; // timeout
+    return last_put_ok ? 1.0 : 0.0; // OK : Error
 }
 
-int Channel::PutValueToCA (int Size) const 
+bool Channel::PutValueToCA (int Size) const 
 {
-	int RetVal;
-
 	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
 	int status = ca_array_put(Type, Size, ChannelID, DataBuffer);
 	if (status != ECA_NORMAL)
-		RetVal = 0;
-	else
-		RetVal = 1;
-
-	status = CA->WaitForPutIO();
-    if (status != ECA_NORMAL)
-        return 0;
-	return RetVal;
-}
-
-void Channel::SetLastPutStatus( double Status )
-{
-	LastPutStatus = Status;
-}
-
-double Channel::GetLastPutStatus() const {
-	return (LastPutStatus);
+		return false;
+	CA->Flush();
+ 	return true;
 }
 
 void Channel::SetMonitorString(const char* MonString, int buflen) {
@@ -507,53 +507,48 @@ bool Channel::EventInstalled() const {
 	return (EventID==0?0:1);
 }
 
-int Channel::AddEvent( caEventCallBackFunc *MonitorEventHandler ) {
-
-	int status;
-	MCAError Err;
-
- 	status = ca_add_array_event(RequestType, ca_element_count(ChannelID), ChannelID,
-                                  MonitorEventHandler, this, 0.0, 0.0, 0.0, &EventID);
+int Channel::AddEvent( caEventCallBackFunc *MonitorEventHandler )
+{
+	int status = ca_add_array_event(RequestType, ca_element_count(ChannelID),
+                                    ChannelID,
+                                    MonitorEventHandler, this,
+                                    0.0, 0.0, 0.0, &EventID);
 	if (status != ECA_NORMAL)
-		MCAError::Error("ca_add_array_event: %s\n", ca_message(status));
-
-	return (status);
-
+		MCAError::Error("ca_add_array_event(%s): %s\n",
+                        PVName, ca_message(status));
+	return status;
 }
 
-void Channel::ClearMonitorString() {
-
+void Channel::ClearMonitorString() 
+{
 	// If it exists, remove the monitor string.
-	//
-	if (MonitorCBString) {
+	if (MonitorCBString)
+    {
 		mxFree(MonitorCBString);
 		MonitorCBString = NULL;
 	}
-
 }
 
-void Channel::ClearEvent() {
+void Channel::ClearEvent()
+{
+	if (!EventID)
+        return;
+    int status = ca_clear_event(EventID);
+	if (status != ECA_NORMAL)
+		MCAError::Warn("ca_add_array_event failed.\n");
 
-	int status;
-	MCAError Err;
+	EventID = 0;
 
-	if (EventID) {
-
-		status = ca_clear_event(EventID);
-		if (status != ECA_NORMAL)
-			MCAError::Warn("ca_add_array_event failed.\n");
-
-		EventID = 0;
-
-		ClearMonitorString();
-	}
+	ClearMonitorString();
 }
 
-bool Channel::MonitorStringInstalled() const {
-	return (MonitorCBString?1:0);
+bool Channel::MonitorStringInstalled() const
+{
+	return MonitorCBString != 0;
 }
 
-const char* Channel::GetMonitorString() const {
-	return (MonitorCBString);
+const char* Channel::GetMonitorString() const
+{
+	return MonitorCBString;
 }
 

@@ -32,10 +32,19 @@ switch nargin
         end
     case 2
         if strcmp(varargin{1}, 'open')
+        	if ~isnumeric(varargin{2})  ||  varargin{2} <= 0
+        	    error('Second argument must be numeric, positive seconds');
+        	end
             mca(1001,varargin{2});
         elseif strcmp(varargin{1}, 'get')
+        	if ~isnumeric(varargin{2})  ||  varargin{2} <= 0
+        	    error('Second argument must be numeric, positive seconds');
+        	end
             mca(1002,varargin{2});
         elseif strcmp(varargin{1}, 'put')
+        	if ~isnumeric(varargin{2})  ||  varargin{2} <= 0
+        	    error('Second argument must be numeric, positive seconds');
+        	end
             mca(1003,varargin{2});
         else
             error('Invalid command option.')

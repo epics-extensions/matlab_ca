@@ -21,8 +21,8 @@ end
 function testCheckDefaultTimeouts
 t = mcatimeout;
 assertEquals('default search timeout', 10.0, t(1), 0.01); 
-assertEquals('default get timeout', 5.0, t(2), 0.01); 
-assertEquals('default put timeout', 0.01, t(3), 0.01);
+assertEquals('default get timeout', 10.0, t(2), 0.01); 
+assertEquals('default put timeout', 10.0, t(3), 0.01);
 
 function testSetCustomTimeouts
 mcatimeout('open', 5);
@@ -147,7 +147,7 @@ mcaclose(pvs);
 function testAlarm
 % 'ramp' should go in and out of MAJOR/HIGH alarm...
 pv = mcacheckopen('ramp');
-% Wait for 'normal'
+disp('Wait for normal');
 i=1;
 while i<10
 	mcaget(pv);
@@ -159,7 +159,7 @@ while i<10
 	i=i+1;
 end
 assertTrue('found normal severity', i<10);
-% Wait for 'major'
+disp('Wait for major');
 i=1;
 while i<10
 	mcaget(pv);
@@ -172,7 +172,7 @@ while i<10
 end
 assertTrue('found major severity', i<10);
 
-
+% These end up in mca(80, ...)
 function testArrayput
 p1 = mcacheckopen('set1');
 p2 = mcacheckopen('set2');
@@ -182,3 +182,62 @@ assertEquals('put OK', 2, mcaget(p2));
 mcaput([p1 p2], [3 4]);
 assertEquals('put OK', 3, mcaget(p1));
 assertEquals('put OK', 4, mcaget(p2));
+mcaclose(p1, p2);
+try
+	mcaput([p1 p2], [3 4]);
+	assertTrue('Should never get here', false);
+catch
+	assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
+end
+
+
+% These end up in mca(70, ...)
+function testPut
+p1 = mcacheckopen('set1');
+mcaput(p1, 10);
+assertEquals('put OK', 10, mcaget(p1));
+mcaput(p1, 20);
+assertEquals('put OK', 20, mcaget(p1));
+mcaclose(p1);
+try
+	mcaput(p1, 3);
+	assertTrue('Should never get here', false);
+catch
+	assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
+end
+
+function testPutTimeout
+mcatimeout('put', 0.000001);
+p1 = mcacheckopen('set1');
+assertEquals('Got timeout', -1, mcaput(p1, 10));
+mcatimeout('put', 10.0);
+assertEquals('Got OK', 1, mcaput(p1, 10));
+mcaclose(p1);
+
+function testPutStrings
+p1 = mcacheckopen('set1.DESC');
+assertEquals('Got OK', 1, mcaput(p1, 'Some Text'));
+try
+    mcaput(p1, 42);
+	assertTrue('Should never get here', false);
+catch
+	assertTrue('Should get here', strfind(lasterr, 'Need string') > 0);
+end
+mcaclose(p1);
+p1 = mcacheckopen('set1');
+assertEquals('Got OK', 1, mcaput(p1, 42));
+try
+    mcaput(p1, '42');
+	assertTrue('Should never get here', false);
+catch
+	assertTrue('Should get here', strfind(lasterr, 'Need numeric') > 0);
+end
+mcaclose(p1);
+
+function testPutCell
+p1 = mcacheckopen('set1');
+p2 = mcacheckopen('set1.DESC');
+mcaput({p1, p2}, { 42, 'Description' });
+assertEquals('Readback matches', 42, mcaget(p1));
+assertEquals('Readback matches', 'Description', mcaget(p2));
+mcaclose(p2, p1);

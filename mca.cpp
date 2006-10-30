@@ -70,24 +70,10 @@ void mca_cleanup()
 	// Empty the Monitor Command Queue
 	mutex.lock();
 	while(!MonitorQueue.IsEmpty())
-		int Tmp = MonitorQueue.Dequeue();
+		MonitorQueue.Dequeue();
 	mutex.unlock();
     delete CA;
     CA = 0;
-}
-
-void mcaPutEventHandler( struct event_handler_args arg )
-{
-        Channel *Chan = (Channel *) arg.usr;
-
-        // This callback writes the integer 1 on success
-        // and 0 on failure to the channel object specified
-        // by void* arg.usr
-        //
-        if (arg.status == ECA_NORMAL)
-                Chan->SetLastPutStatus(1);
-        else
-                Chan->SetLastPutStatus(0);
 }
 
 void mcaMonitorEventHandler( struct event_handler_args arg )
@@ -149,7 +135,6 @@ static void getChannelInfo(Channel *Chan, mxArray *matrix, int row)
 // mca(..) calls and the switch in here....
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-	int status = 0;
 	char PVName[PVNAME_SZ + 1];
 
 	// Lazy initialization
@@ -482,97 +467,71 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	case 70:    // MCAPUT(PV, VALUE, PV, VALUE, ...) - Put values to PVs by their MCA Handles
 	{
-
-		int i;
-		double *myDblPr;
-
-		dbr_string_t StrBuffer;
-
 		// Following the first argument, which is the command switch, the
 		// values for each channel come in pairs
-		//
 		int NumHandles = (nrhs - 1) /2;
-
-		// Process each channel...
-		//
-		for (i = 0; i < NumHandles; i++)
-                {
-			int j = 2 + i * 2;
-
-			// Get the handle and find the channel
-			//
+        dbr_string_t StrBuffer;
+        
+        plhs[0] = mxCreateDoubleMatrix(1, NumHandles, mxREAL);
+        double *result = mxGetPr(plhs[0]);
+		for (int i = 0; i < NumHandles; i++)
+        {	// Get the handle and find the channel
+            int j = 2 + i * 2;
 			int Handle = (int) mxGetScalar(prhs[1 + i * 2]);
-
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
                 MCAError::Error("mcaput(%d): Invalid handle.", Handle);
 
 			chtype RequestType = Chan->GetRequestType();
 			int Num = Chan->GetNumElements(); 
-
-			// Get the value to write
-			//
+			// Get the number of values to write
 			int L;
 			if (mxIsChar(prhs[j]))
 				L = 1;
 			else
-                        {       // min(mxGetNumberOfElements(prhs[j]), Num)
-				L = mxGetNumberOfElements(prhs[j]);
+            {   // minimum(PV array size, provided data size)
+            	L = mxGetNumberOfElements(prhs[j]);
 				if (Num < L)
-                                    L = Num;
-                        }
-
-			if (RequestType == DBR_TIME_STRING) {
-
-				if (mxIsChar(prhs[j])) {
-
+                    L = Num;
+            }
+			if (RequestType == DBR_TIME_STRING)
+            {
+                if (mxIsNumeric(prhs[j]))
+                    MCAError::Error("mcaput(%s): Need string values",
+                                    Chan->GetPVName());
+				if (mxIsChar(prhs[j]))
+                {
 					mxGetString(prhs[j], StrBuffer, sizeof(dbr_string_t));
 					Chan->SetStringValue(0, StrBuffer);
-
 				}
-				else if (mxIsCell(prhs[j])) {
-
-					for (int k = 0; k < L; k++) {
-						
+				else if (mxIsCell(prhs[j]))
+                {
+					for (int k = 0; k < L; k++)
+                    {
 						mxGetString(mxGetCell(prhs[j], k), StrBuffer, sizeof(dbr_string_t));
 						Chan->SetStringValue(k, StrBuffer);
 					}
 				}
 			}
-			else {
-				
-				// Set the value into the Buffer
-				//
-				myDblPr = mxGetPr(prhs[j]);
+			else // native data is numeric
+            {	
+                if (!mxIsNumeric(prhs[j]))
+                    MCAError::Error("mcaput(%s): Need numeric values",
+                                    Chan->GetPVName());
+                double *myDblPr = mxGetPr(prhs[j]);
 				for (int k = 0; k < L; k++)
 					Chan->SetNumericValue(k, myDblPr[k]);
-
 			}
 
-			// Put the values to Channel Access
-			//
-			// This used to be: Chan->PutValueToCA(L);
-                        Chan->PutValueToCACallback(L, mcaPutEventHandler);
+			// Put the values to Channel Access, get response
+            result[i] = Chan->PutValueToCACallback(L);
+            // mexPrintf("back from PutValueToCACallback(%s) : %g\n",
+            //           Chan->GetPVName(), result[i]);
 		}
-
-		plhs[0] = mxCreateDoubleMatrix(1, NumHandles, mxREAL);
-		myDblPr = mxGetPr(plhs[0]);
-
-		for (i = 0; i < NumHandles; i++)
-                {
-                        int Handle = (int) mxGetScalar(prhs[1 + i * 2]);
-                        Channel *Chan = ChannelTable.find(Handle);
-                        myDblPr[i] = Chan->GetLastPutStatus();
-
-			// Before use of PutValueToCACallback:
-                        // myDblPr[i] = 1;
-		}
-
 		break;
 	}
 
-	// MCAPUT(PV-array, VALUE-array) - Where VALUE array contains only scalars
-	case 80:
+	case 80:    // MCAPUT(PV-array, VALUE-array) - VALUE array contains scalars
 	{
 		int M = mxGetM(prhs[1]);
 		int N = mxGetN(prhs[1]);
@@ -583,15 +542,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 			int Handle = (int) (*(mxGetPr(prhs[1]) + i));
 			Channel *Chan = ChannelTable.find(Handle);
 			if (!Chan)
-                MCAError::Error("mcaput: Invalid handle %d.", Handle);
+                MCAError::Error("mcaput([pv, ..], [scalar, ...]): Invalid handle %d.", Handle);
 			if (! Chan->IsNumeric())
                 MCAError::Error("MCAPUT([pv, pv, ..], [scalar, scalar, ...]) can only be used for numeric PVs.");
 			// Write the value to the PV
 			double Value = (*(mxGetPr(prhs[2]) + i));
-			Chan->SetNumericValue(0, Value);					
-			int status = Chan->PutValueToCA(1);
-            double *myDblPr = mxGetPr(plhs[0]);
-            myDblPr[i] = status;
+			Chan->SetNumericValue(0, Value);
+            double *result = mxGetPr(plhs[0]);
+            result[i] = Chan->PutValueToCA(1) ? 1.0 : 0.0;
 		}
 		break;
 	}

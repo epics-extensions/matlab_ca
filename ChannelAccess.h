@@ -29,9 +29,9 @@ public:
 
 	void SetDefaultTimeouts()
     {
-        MCA_SEARCH_TIMEOUT = DEFAULT_SEARCH_TIMEOUT;
-        MCA_GET_TIMEOUT = DEFAULT_GET_TIMEOUT;
-        MCA_PUT_TIMEOUT = DEFAULT_PUT_TIMEOUT;
+        MCA_SEARCH_TIMEOUT = DEFAULT_TIMEOUT;
+        MCA_GET_TIMEOUT = DEFAULT_TIMEOUT;
+        MCA_PUT_TIMEOUT = DEFAULT_TIMEOUT;
     }
 
 	void SetSearchTimeout(double SearchTimeOut )
@@ -58,16 +58,11 @@ public:
     double GetPutTimeout() const
     {   return MCA_PUT_TIMEOUT; }
 
-    int ChannelAccess::WaitForPut() const
-    {   return ca_pend_event(MCA_PUT_TIMEOUT); }
-
-    int ChannelAccess::WaitForPutIO() const
-    {   return ca_pend_io(MCA_PUT_TIMEOUT); }
+    int ChannelAccess::Flush() const
+    {   return ca_flush_io(); }
 
 private:
-    static const double DEFAULT_SEARCH_TIMEOUT = 10.0;
-    static const double DEFAULT_GET_TIMEOUT = 5.0;
-    static const double DEFAULT_PUT_TIMEOUT = 0.01;
+    static const double DEFAULT_TIMEOUT = 10.0;
 
 	double MCA_SEARCH_TIMEOUT;
 	double MCA_GET_TIMEOUT;

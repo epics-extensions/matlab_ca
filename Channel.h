@@ -81,10 +81,16 @@ public:
 	//
 	void SetNumericValue( int, double );
 	void SetStringValue ( int, char* );
-	void PutValueToCACallback ( int, caEventCallBackFunc * );
-	int PutValueToCA ( int ) const;
-	void SetLastPutStatus ( double );
-	double GetLastPutStatus() const;
+    
+    /** Issue CA put callback, wait for result within timeout.
+     *  @return -1.0 on timeout, 0.0 on error, 1.0 if OK.
+     */ 
+	double PutValueToCACallback (int Size);
+    
+    /** Simply send current value to CA, no callback.
+     *  @return true when OK.
+     */
+	bool PutValueToCA ( int ) const;
 
 	void SetMonitorString( const char*, int );
 	bool MonitorStringInstalled() const;
@@ -132,7 +138,10 @@ private:
 	int NumElements;
 	chtype RequestType;
 
-	double LastPutStatus;
+    // used for put-callback
+    static void put_callback(struct event_handler_args arg);
+    epicsEvent put_completed;
+    bool last_put_ok;
 
 	mxArray* Cache;
 	int EventCount;
