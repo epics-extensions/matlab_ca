@@ -769,6 +769,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         myDblPr[2] = CA->GetPutTimeout();
         break;
     }
+    
+    case 9999:
+    {
+        if (CA)
+            CA->setDebug(nrhs > 1);
+        break;
+    }
 
     default:
         MCAError::Error("Invalid mca code %d", commandswitch);

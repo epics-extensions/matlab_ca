@@ -11,7 +11,7 @@ class ChannelAccess
 { 
 public:
 	// Constructor creates CA context
-	ChannelAccess()
+	ChannelAccess() : debug(false)
     {
         mexPrintf("MCA Initialized\n");
         SetDefaultTimeouts();
@@ -27,6 +27,12 @@ public:
         mexPrintf("MCA Finalized\n");
     }
 
+    bool debugMode() const
+    {   return debug; }
+    
+    void setDebug(bool mode)
+    {   debug = mode; }
+    
 	void SetDefaultTimeouts()
     {
         MCA_SEARCH_TIMEOUT = DEFAULT_TIMEOUT;
@@ -63,6 +69,8 @@ public:
 
 private:
     static const double DEFAULT_TIMEOUT = 10.0;
+    
+    bool debug;
 
 	double MCA_SEARCH_TIMEOUT;
 	double MCA_GET_TIMEOUT;

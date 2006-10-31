@@ -56,6 +56,8 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
 
     // Allocate memory for some of the Channel's data structures.
     AllocChanMem();
+    if (CA->debugMode())
+        mexPrintf("Channel '%s' created, handle %d\n", PVName, Handle);
 }
 
 Channel::~Channel()
@@ -68,6 +70,8 @@ Channel::~Channel()
         if (status != ECA_NORMAL)
             MCAError::Error("ca_clear_channel: %s\n", ca_message(status));
     }
+    if (CA->debugMode())
+        mexPrintf("Channel '%s' disposed, Handle %d\n", PVName, Handle);
 
     mxFree(PVName);    
     PVName = 0;
@@ -337,9 +341,10 @@ void Channel::put_callback(struct event_handler_args arg)
 {
     Channel *me = (Channel *) arg.usr;
     me->last_put_ok = arg.status == ECA_NORMAL;
-    //mexPrintf("put_callback(%s): %s in thread %d...\n",
-    //          me->PVName, (me->last_put_ok ? "OK" : "Error"),
-    //          (unsigned long) epicsThreadGetIdSelf());
+    if (me->CA->debugMode())
+        mexPrintf("put_callback(%s): %s in thread %d...\n",
+                  me->PVName, (me->last_put_ok ? "OK" : "Error"),
+                  (unsigned long) epicsThreadGetIdSelf());
     
     // Wake waiting PutValueToCACallback()
     me->put_completed.signal();
@@ -347,16 +352,16 @@ void Channel::put_callback(struct event_handler_args arg)
 
 double Channel::PutValueToCACallback (int Size)
 {
-    int status;
-
+	int status;
     // Reset status, clear the signal
     put_completed.tryWait();
     last_put_ok = false;
 
-    //mexPrintf("PutValueToCACallback(%s), thread %lu...\n",
-    //          PVName, (unsigned long) epicsThreadGetIdSelf());
-    chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
-    status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
+    if (CA->debugMode())
+        mexPrintf("PutValueToCACallback(%s), handle %d, thread %lu...\n",
+                  PVName, Handle, (unsigned long) epicsThreadGetIdSelf());
+	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
+	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
                                    put_callback, this);
     if (status != ECA_NORMAL)
     {
