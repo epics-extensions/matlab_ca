@@ -1,39 +1,36 @@
 Matlab Channel Access (MCA)
 
 * V 4.0 - Kay Kasemir, Sept 2006
-Overall code review and cleanup on the way to understanding the code
-in order to fix the "No channel exists for this handle." error
-and the occasional crash on exiting Matlab.
+Overall code review and cleanup.
 
-In the end, the main reason for that first error seems to be timing.
-Due to irreproducible circumstances, mcaopen() will sometimes
-fail to connect within the default timeout.
-When mcaopen() is called interactively, it will print a warning
-message and return a 0 handle.
-When invoked from inside a script, however, Matlab does not show
-this warning message, and subsequent use of the 0 handle will then
-result in ERROR: "No channel exists for this handle."
-So the quick fix is:
-- The default search timeout was increased from 1 to 10 seconds.
-  You can still change it via mcatimeout().
+- Made the "No channel exists for this handle." error messages more
+  specific. The main reason for getting this error is timing.
+  Due to irreproducible circumstances, MCAOPEN will sometimes
+  fail to connect within the default timeout.
+  When MCAOPEN is called interactively, it will print a warning
+  message and return a 0 handle.
+  When invoked from inside a script, however, Matlab does not show
+  this warning message, and subsequent use of the 0 handle will then
+  result in this type of error.
+- The default search timeout was increased from 1 to 10 seconds to
+  make this error less likely.
+  (You can still change it via MCATIMEOUT).
 - Scripts that re-use the same PV, but don't want to bother
   with elaborate bookkeeping of open connections, might
-  consider omitting the mcaclose() calls, and use mcacheckopen()
-  in place of every mcaopen() call.
+  consider omitting the MCACLOSE calls, and use MCACHECKOPEN
+  in place of every MCAOPEN call.
   This keeps all connections open and thus avoids re-connect timeouts.
-  Final cleanup can be done via mcaexit().
-  
-In addition, this was changed:  
-- Changed PV hash to template, found one reason for the
+  Final cleanup can be done via MCAEXIT.  
+- Changed PV hash to template, found one reason for the occasional
   crash-on-exit:
   In mca_cleanup, the 'iterator' used the node that
   was just deleted to get the 'next' node.
 - Most messages are now more specific, displaying the invoked method
   and the affected PV name.
 - Use PVNAME_SZ from base instead of yet another #define.
-- Removed all compiler warnings from 'Wall'.
+- No more compiler warnings with g++ 4.0 and '-Wall'.
 - MCAPUT changes:
-  It mostly used a put-callback, which is good, because in Matlab
+  It mostly uses a CA put-callback, which is good, because in Matlab
   scripts you often want to be assured that the 'put' finished before
   you move on.
   Issue 1:
@@ -43,9 +40,9 @@ In addition, this was changed:
   Now the online help tells you so.
   
   Issue 2:
-  mcaput always simply waited for the 'put' timeout.
+  MCAPUT always simply waited for the 'put' timeout.
   With the default 'put' timeout of 0.01 secs, it would often
-  return 0 = "put didn't suceed" because it didn't wait long enough.
+  return 0 = "put didn't succeed" because it didn't wait long enough.
   Worse: It would actually return the status of the last callback,
   which might be the 'OK' from a previous caput, not the yet-to-arrive
   'not OK' from the ongoing caput.
@@ -58,10 +55,8 @@ In addition, this was changed:
   Also changed the default 'put' timeout to 10 seconds, in fact
   all timeouts now default to 10 seconds.
   
-  Issue 3:
-  mcaput didn't give any error when writing strings to non-string PVs
-  and vice versa.
-  
+- MCAPUT didn't give any error when writing strings to non-string PVs
+  and vice versa. 
 - monitor for 'STRING' PVs didn't update the alarm status/severity.
 - added a mutex for the monitor cache, since both the monitor callback
   and matlab access it concurrently.
@@ -70,7 +65,7 @@ In addition, this was changed:
 - Replaced ChannelAccess.cpp by inlines, no more IsInitialized() checks needed
   because that's automatic.
 - Reviewed all the online help, fixed some inconsistencies.
-  Example: mcainfo and mcastate were wrong.
+  Example: MCAINFO and MCASTATE were wrong.
   Since closed channels are simply gone, they don't show up
   in the mcastate or mcainfo lists at all,
   so they also don't show up as 'closed'.

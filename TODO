@@ -1,2 +1,131 @@
 
-- More/different semaphores for monitor data structures, see Channel.cpp
+- More/different semaphores for monitor data structures,
+  comments in Channel.cpp
+  
+- Investigate one quirky IOC crash:
+When running the put-callback test against a 3.14.8.2 softIoc
+on Mac OS X, the IOC will sometimes crash:
+
+p1 = mcaopen('set1'); p2 = mcaopen('set1.DESC');
+mcaput({p1, p2}, {42, 'Description'});
+% The immediate follow-up of 'put' and 'close' does it
+mcaclose(p2, p1);
+
+This is highly dependent on the exact timing of things.
+What prevents the crash:
+- Enabling debug prints that slow the overall execution
+- Running Matlab from the command-line without the GUI
+- An added 'pause' before the close
+
+Symptom on the IOC:
+
+epicsEvent pthread_mutex_lock failed: error Invalid argument
+fatal error: epicsEventSignal
+filename="../../../src/libCom/taskwd/taskwd.c" line number=174
+task 0x1248b40 suspended
+
+One can run the test again and again, each time creating
+another suspended thread, like two in this example:
+
+            NAME     EPICS ID   PTHREAD ID   OSIPRI  OSSPRI  STATE
+          _main_    0x1200630            0      0       0       OK
+      timerQueue    0x1240bf0     25200128     70      37       OK
+           cbLow    0x1240d80     25201152     59      33       OK
+        cbMedium    0x1240ec0     25202176     64      35       OK
+          cbHigh    0x1241000     25236992     71      37       OK
+          errlog    0x12403a0     25195008     10      18       OK
+          taskwd    0x12405e0     25199104     10      18       OK
+        dbCaLink    0x1241290     25238016     50      31       OK
+        scanOnce    0x1241f80     25244160     70      37       OK
+          scan10    0x1242530     25245184     60      34       OK
+           scan5    0x1242610     25246208     61      34       OK
+           scan2    0x12426f0     25247232     62      34       OK
+           scan1    0x12427d0     25248256     63      35       OK
+         scan0.5    0x12428b0     25249280     64      35       OK
+         scan0.2    0x1242990     25250304     65      35       OK
+         scan0.1    0x1242a70     25251328     66      36       OK
+         CAS-TCP    0x1243030     25252352     12      18       OK
+      CAS-beacon    0x1243120     25253376      8      17       OK
+         CAS-UDP    0x1243220     25257984      4      16       OK
+       CAS-event    0x1248c20     25254400     16      20  SUSPEND
+       CAS-event    0x1248b40     25279488     16      20  SUSPEND
+       CAS-event    0x1248e40     25256448     16      20       OK
+      CAS-client    0x1248ef0     25255424     20      21       OK
+
+      
+View in the debugger:
+
+(gdb) info threads
+  23 process 12048 thread 0x4b07  0x90023460 in recvfrom ()
+* 22 process 12048 thread 0x3763  0x9002bbc8 in semaphore_wait_signal_trap ()
+  21 process 12048 thread 0x3857  0x9002bbc8 in semaphore_wait_signal_trap ()
+  20 process 12048 thread 0x355b  0x9002bbc8 in semaphore_wait_signal_trap ()
+  19 process 12048 thread 0x3303  0x90023460 in recvfrom ()
+  18 process 12048 thread 0x3103  0x90040978 in mach_wait_until ()
+  17 process 12048 thread 0x2f03  0x9005b660 in accept ()
+  16 process 12048 thread 0x2e03  0x90040978 in mach_wait_until ()
+  15 process 12048 thread 0x2d03  0x90040978 in mach_wait_until ()
+  14 process 12048 thread 0x2c03  0x90040978 in mach_wait_until ()
+  13 process 12048 thread 0x2b03  0x90040978 in mach_wait_until ()
+  12 process 12048 thread 0x2a03  0x90040978 in mach_wait_until ()
+  11 process 12048 thread 0x2903  0x90040978 in mach_wait_until ()
+  10 process 12048 thread 0x2803  0x90040978 in mach_wait_until ()
+  9 process 12048 thread 0x2703  0x9002bbc8 in semaphore_wait_signal_trap ()
+  8 process 12048 thread 0x2603  0x9002bbc8 in semaphore_wait_signal_trap ()
+  7 process 12048 thread 0x2503  0x9002bbc8 in semaphore_wait_signal_trap ()
+  6 process 12048 thread 0x2403  0x9002bbc8 in semaphore_wait_signal_trap ()
+  5 process 12048 thread 0x2303  0x9002bbc8 in semaphore_wait_signal_trap ()
+  4 process 12048 thread 0x1103  0x90054ae8 in semaphore_timedwait_signal_trap ()
+  3 process 12048 thread 0x1003  0x90040978 in mach_wait_until ()
+  2 process 12048 thread 0xf03  0x9002bbc8 in semaphore_wait_signal_trap ()
+  1 process 12048 thread 0xd03  0x900140a4 in read ()
+  
+As for the mapping of the softIoc 'thread' listing to the GDB 'info threads':
+Backtrace checks suggest: GDB thread 1 = '_main_', the two listings are in
+reverse order, so the two suspended threads are GDB threads 20 and 21:
+
+(gdb) thread 20
+[Switching to thread 20 (process 12048 thread 0x355b)]
+#0  0x9002bbc8 in semaphore_wait_signal_trap ()
+(gdb) bt
+#0  0x9002bbc8 in semaphore_wait_signal_trap ()
+#1  0x900306ac in pthread_cond_wait ()
+#2  0x01026ac8 in epicsEventWait (pevent=0x12489c0) at ../../../src/libCom/osi/os/posix/osdEvent.c:75
+#3  0x010259e0 in epicsThreadSuspendSelf () at ../../../src/libCom/osi/os/posix/osdThread.c:473
+#4  0x01026990 in epicsEventSignal (pevent=0x1c03) at ../../../src/libCom/osi/os/posix/osdEvent.c:118
+#5  0x002bba40 in event_task (pParm=0x7e5614) at ../dbEvent.c:972
+#6  0x0102511c in start_routine (arg=0x1248c20) at ../../../src/libCom/osi/os/posix/osdThread.c:320
+#7  0x9002b508 in _pthread_body ()
+(gdb) thread 21
+[Switching to thread 21 (process 12048 thread 0x3857)]
+#0  0x9002bbc8 in semaphore_wait_signal_trap ()
+(gdb) bt
+#0  0x9002bbc8 in semaphore_wait_signal_trap ()
+#1  0x900306ac in pthread_cond_wait ()
+#2  0x01026ac8 in epicsEventWait (pevent=0x1248df0) at ../../../src/libCom/osi/os/posix/osdEvent.c:75
+#3  0x010259e0 in epicsThreadSuspendSelf () at ../../../src/libCom/osi/os/posix/osdThread.c:473
+#4  0x01026990 in epicsEventSignal (pevent=0x1b03) at ../../../src/libCom/osi/os/posix/osdEvent.c:118
+#5  0x002bba40 in event_task (pParm=0x7e49c8) at ../dbEvent.c:972
+#6  0x0102511c in start_routine (arg=0x1248b40) at ../../../src/libCom/osi/os/posix/osdThread.c:320
+#7  0x9002b508 in _pthread_body ()
+
+Not much more info:
+(gdb) fra 5
+#5  0x002bba40 in event_task (pParm=0x7e49c8) at ../dbEvent.c:972
+972                 (*evUser->extralabor_sub)(evUser->extralabor_arg);
+(gdb) list
+967             }
+968             evUser->extraLaborBusy = FALSE;
+969
+970             if(evUser->extra_labor && evUser->extralabor_sub){
+971                 evUser->extra_labor = FALSE;
+972                 (*evUser->extralabor_sub)(evUser->extralabor_arg);
+973             }
+974
+975             for ( ev_que = &evUser->firstque; ev_que; 
+976                     ev_que = ev_que->nextque ) {
+(gdb) p evUser
+No symbol "evUser" in current context.
+
+
+
