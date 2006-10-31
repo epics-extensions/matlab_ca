@@ -114,7 +114,8 @@ void mca_cleanup()
 void monitor_callback( struct event_handler_args arg )
 {
     Channel *Chan = (Channel *) arg.usr;
-    // mexPrintf("monitor_callback(%s) ...\n", Chan->GetPVName());
+    if (CA->debugMode())
+        mexPrintf("monitor_callback(%s) ...\n", Chan->GetPVName());
 
     Chan->LoadMonitorCache(arg);
     Chan->IncrementEventCount();
@@ -587,8 +588,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         Channel *Chan = ChannelTable.find(Handle);
         if (!Chan)
              MCAError::Error("mcamon(%d): Invalid handle.", Handle);
-
-        mexPrintf("mcamon(%s)...\n", Chan->GetPVName());
         bool OK = true;
         // If a third argument is specified
         if (nrhs > 2)
@@ -722,20 +721,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     //             the monitor queue
     case 600:
     {
+        if (CA->debugMode())
+            mexPrintf("MCAEXEC triggered\n");
         int Handle;
         while ((Handle = MonitorQueue.remove()) != 0)
         {
             // Find the channel.  If it still exists, execute its 
             // command string (if it has one.)
             Channel *Chan = ChannelTable.find(Handle);
-            if (!Chan)
+            if (Chan)
             {
                 const char* MonitorString = Chan->GetMonitorString();
                 if (MonitorString)
                     mexEvalString(MonitorString);
             }
             else
-                MCAError::Warn("MCA Timer: internal error, unknown handle %d\n",
+                MCAError::Warn("MCAEXEC: internal error, unknown handle %d\n",
                                Handle);
         }
         break;

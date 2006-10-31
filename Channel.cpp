@@ -29,6 +29,7 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       AlarmSeverity(0),
       NumElements(0),
       RequestType(0),
+      awaiting_put_callback(false),
       last_put_ok(false),
       Cache(0)
 {
@@ -337,10 +338,21 @@ void Channel::SetStringValue (int Index, char* StrBuffer)
     }
 }
 
+// Invoked by CAC library when 'put' is done.
+//
+// In principle, there needs to be another mutex for the awaiting_put_callback
+// and last_put_ok handshake variables...
 void Channel::put_callback(struct event_handler_args arg)
 {
     Channel *me = (Channel *) arg.usr;
-    me->last_put_ok = arg.status == ECA_NORMAL;
+    if (! me->awaiting_put_callback)
+    {   // That ship has sailed...
+        if (me->CA->debugMode())
+            mexPrintf("put_callback(%s): in thread %d arrived too late\n",
+                      me->PVName, (unsigned long) epicsThreadGetIdSelf());
+        return;
+    }
+    me->last_put_ok = (arg.status == ECA_NORMAL);
     if (me->CA->debugMode())
         mexPrintf("put_callback(%s): %s in thread %d...\n",
                   me->PVName, (me->last_put_ok ? "OK" : "Error"),
@@ -352,7 +364,7 @@ void Channel::put_callback(struct event_handler_args arg)
 
 double Channel::PutValueToCACallback (int Size)
 {
-	int status;
+    int status;
     // Reset status, clear the signal
     put_completed.tryWait();
     last_put_ok = false;
@@ -360,8 +372,9 @@ double Channel::PutValueToCACallback (int Size)
     if (CA->debugMode())
         mexPrintf("PutValueToCACallback(%s), handle %d, thread %lu...\n",
                   PVName, Handle, (unsigned long) epicsThreadGetIdSelf());
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
-	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
+    chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
+    awaiting_put_callback = true;
+    status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
                                    put_callback, this);
     if (status != ECA_NORMAL)
     {
@@ -372,9 +385,13 @@ double Channel::PutValueToCACallback (int Size)
     }
     CA->Flush();
     // Wait for response ...
-    if (! put_completed.wait(CA->GetPutTimeout()))
+    bool got_response = put_completed.wait(CA->GetPutTimeout());
+    awaiting_put_callback = false;
+    if (! got_response)
         return -1.0; // timeout
-    return last_put_ok ? 1.0 : 0.0; // OK : Error
+    if (last_put_ok)
+        return 1.0;  // OK
+    return 0.0;      // Error
 }
 
 bool Channel::PutValueToCA (int Size) const 
@@ -384,7 +401,7 @@ bool Channel::PutValueToCA (int Size) const
     if (status != ECA_NORMAL)
         return false;
     CA->Flush();
-     return true;
+    return true;
 }
 
 void Channel::SetMonitorString(const char* MonString)

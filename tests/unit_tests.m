@@ -8,6 +8,8 @@ tests = str2func(suite([mfilename '.m']));
 %========================================================================
 
 function testVersion
+% Reset, then check
+mcaexit;
 assertEquals('Version test', '4.0', mcaversion); 
 
 %
@@ -162,25 +164,25 @@ pv = mcacheckopen('ramp');
 disp('Wait for normal');
 i=1;
 while i<10
-	mcaget(pv);
-	ss = mcaalarm(pv);
-	if ss.severity == 0
-		break
-	end
-	pause(1.0);
-	i=i+1;
+    mcaget(pv);
+    ss = mcaalarm(pv);
+    if ss.severity == 0
+        break
+    end
+    pause(1.0);
+    i=i+1;
 end
 assertTrue('found normal severity', i<10);
 disp('Wait for major');
 i=1;
 while i<10
-	mcaget(pv);
-	ss = mcaalarm(pv);
-	if ss.severity == 2
-		break
-	end
-	pause(1.0);
-	i=i+1;
+    mcaget(pv);
+    ss = mcaalarm(pv);
+    if ss.severity == 2
+        break
+    end
+    pause(1.0);
+    i=i+1;
 end
 assertTrue('found major severity', i<10);
 mcaclose(pv);
@@ -197,10 +199,10 @@ assertEquals('put OK', 3, mcaget(p1));
 assertEquals('put OK', 4, mcaget(p2));
 mcaclose(p1, p2);
 try
-	mcaput([p1 p2], [3 4]);
-	assertTrue('Should never get here', false);
+    mcaput([p1 p2], [3 4]);
+    assertTrue('Should never get here', false);
 catch
-	assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
+    assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
 end
 
 
@@ -213,17 +215,25 @@ mcaput(p1, 20);
 assertEquals('put OK', 20, mcaget(p1));
 mcaclose(p1);
 try
-	mcaput(p1, 3);
-	assertTrue('Should never get here', false);
+    mcaput(p1, 3);
+    assertTrue('Should never get here', false);
 catch
-	assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
+    assertTrue('Should get here', strfind(lasterr, 'Invalid handle') > 0);
 end
 
-%
+% Use tiny time which should result in timeout,
+% then try long time which should suffice.
+% However, you never know with these timing tests...
 function testPutTimeout
-mcatimeout('put', 0.000001);
+mcatimeout('put', 1e-10);
 p1 = mcacheckopen('set1');
 assertEquals('Got timeout', -1, mcaput(p1, 10));
+% Problem:
+% We didn't allow enough time for the last callback to arrive.
+% Wait a little for it to arrive and get discarded,
+% because otherwise we might confuse it with the result
+% of the next mcaput.
+pause(3);
 mcatimeout('put', 10.0);
 assertEquals('Got OK', 1, mcaput(p1, 10));
 mcaclose(p1);
@@ -234,18 +244,18 @@ p1 = mcacheckopen('set1.DESC');
 assertEquals('Got OK', 1, mcaput(p1, 'Some Text'));
 try
     mcaput(p1, 42);
-	assertTrue('Should never get here', false);
+    assertTrue('Should never get here', false);
 catch
-	assertTrue('Should get here', strfind(lasterr, 'Need string') > 0);
+    assertTrue('Should get here', strfind(lasterr, 'Need string') > 0);
 end
 mcaclose(p1);
 p1 = mcacheckopen('set1');
 assertEquals('Got OK', 1, mcaput(p1, 42));
 try
     mcaput(p1, '42');
-	assertTrue('Should never get here', false);
+    assertTrue('Should never get here', false);
 catch
-	assertTrue('Should get here', strfind(lasterr, 'Need numeric') > 0);
+    assertTrue('Should get here', strfind(lasterr, 'Need numeric') > 0);
 end
 mcaclose(p1);
 
