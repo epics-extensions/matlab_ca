@@ -167,6 +167,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     // Lazy initialization
     if (CA == 0)
     {
+        /* With R3.14.7, Matlab crashes on exit with 'errlogInit failed...'
+         * unless we do this here:
+         */
+        errlogInit(0);
         CA = new ChannelAccess();
         mexAtExit(mca_cleanup);
         mexLock();

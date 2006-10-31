@@ -66,6 +66,10 @@ to include the library and m files for use from within matlab.
 
 System specifics for setups that 'worked' like this:
 
+* Red Hat Enterprise Linux AS release 3, EPICS R3.14.7, Matlab 7.2
+All OK, just define the EPICS_.. and MEX variables
+listed in the start of the Makefile in the environment.
+
 * MacOS X 10.4, EPICS R3.14.8.2, Matlab 7.1 and 7.2.
 To use the default gcc4 which was also used
 to compile EPICS base:
