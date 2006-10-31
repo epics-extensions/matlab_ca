@@ -32,7 +32,7 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       last_put_ok(false),
       Cache(0)
 {
-	ResetEventCount();
+    ResetEventCount();
     
     int status = ca_create_channel(Name, 0, 0, 0, &ChannelID);
     if (status != ECA_NORMAL)
@@ -69,25 +69,25 @@ Channel::~Channel()
             MCAError::Error("ca_clear_channel: %s\n", ca_message(status));
     }
 
-	mxFree(PVName);	
+    mxFree(PVName);    
     PVName = 0;
 
-	if (HostName)
+    if (HostName)
     {
-		mxFree(HostName);
+        mxFree(HostName);
         HostName = 0;
-    }	
+    }    
 
-	if (DataBuffer)
+    if (DataBuffer)
     {
-		mxFree(DataBuffer);
+        mxFree(DataBuffer);
         DataBuffer = 0;
     }
 
     cache_lock.lock();
-	if (Cache)
+    if (Cache)
     {
-		mxDestroyArray(Cache);
+        mxDestroyArray(Cache);
         Cache = 0;
     }
     cache_lock.unlock();
@@ -95,242 +95,242 @@ Channel::~Channel()
 
 void Channel::AllocChanMem()
 {
-	// Allocate space for the data on this channel
-	NumElements = ca_element_count(ChannelID);
-	RequestType = dbf_type_to_DBR_TIME(ca_field_type(ChannelID));
+    // Allocate space for the data on this channel
+    NumElements = ca_element_count(ChannelID);
+    RequestType = dbf_type_to_DBR_TIME(ca_field_type(ChannelID));
 
-	// Allocate enough space for the data buffer.
-	if (DataBuffer)
-		mxFree(DataBuffer);
+    // Allocate enough space for the data buffer.
+    if (DataBuffer)
+        mxFree(DataBuffer);
 
-	DataBuffer = (union db_access_val *) mxCalloc(1, dbr_size_n(RequestType, NumElements));
-	mexMakeMemoryPersistent(DataBuffer);
+    DataBuffer = (union db_access_val *) mxCalloc(1, dbr_size_n(RequestType, NumElements));
+    mexMakeMemoryPersistent(DataBuffer);
 
-	// Allocate the space for the monitor cache.
+    // Allocate the space for the monitor cache.
     cache_lock.lock();
-	if (Cache)
-		mxDestroyArray(Cache);
-	if (RequestType == DBR_TIME_STRING)
-    {	// Create MATLAB String - originally empty
-		if (NumElements == 1)
-			Cache = mxCreateString("");
-		else
+    if (Cache)
+        mxDestroyArray(Cache);
+    if (RequestType == DBR_TIME_STRING)
+    {    // Create MATLAB String - originally empty
+        if (NumElements == 1)
+            Cache = mxCreateString("");
+        else
         {
-			Cache = mxCreateCellMatrix(1, NumElements);
-			for (int i = 0; i < NumElements; i++)
+            Cache = mxCreateCellMatrix(1, NumElements);
+            for (int i = 0; i < NumElements; i++)
             {
-				mxArray* mymxArray = mxCreateString("");
-				//mexMakeArrayPersistent(mymxArray);
-				mxSetCell(Cache, i, mymxArray);
-			}
-		}
-	}
-	else
-    {	// Create a MATLAB numeric array
-		Cache = mxCreateDoubleMatrix(1, NumElements, mxREAL);
-	}
-	mexMakeArrayPersistent(Cache);
+                mxArray* mymxArray = mxCreateString("");
+                //mexMakeArrayPersistent(mymxArray);
+                mxSetCell(Cache, i, mymxArray);
+            }
+        }
+    }
+    else
+    {    // Create a MATLAB numeric array
+        Cache = mxCreateDoubleMatrix(1, NumElements, mxREAL);
+    }
+    mexMakeArrayPersistent(Cache);
     cache_lock.unlock();
 }
 
 bool Channel::IsNumeric() const
 {
-	switch (RequestType)
+    switch (RequestType)
     {
-	case DBR_TIME_STRING:
+    case DBR_TIME_STRING:
         return false;
-	case DBR_TIME_CHAR:
-	case DBR_TIME_INT:
-	case DBR_TIME_FLOAT:
-	case DBR_TIME_ENUM:
-	case DBR_TIME_LONG:
-	case DBR_TIME_DOUBLE:
+    case DBR_TIME_CHAR:
+    case DBR_TIME_INT:
+    case DBR_TIME_FLOAT:
+    case DBR_TIME_ENUM:
+    case DBR_TIME_LONG:
+    case DBR_TIME_DOUBLE:
         return true;
-	default:
-		MCAError::Error("IsNumeric(%s): Unimplemented Request Type %d in GetRequestTypeStr().",
+    default:
+        MCAError::Error("IsNumeric(%s): Unimplemented Request Type %d in GetRequestTypeStr().",
                         PVName, (int) RequestType);
-	}
+    }
     return false;
 }
 
 const char* Channel::GetRequestTypeStr()  const
 {
-	const char* ReqString;
+    const char* ReqString;
 
-	switch (RequestType) {
-	case DBR_TIME_STRING:
-		ReqString = "STRING";
-		break;
-	case DBR_TIME_INT:
-		ReqString = "INT";
-		break;
-	case DBR_TIME_FLOAT:
-		ReqString = "FLOAT";
-		break;
-	case DBR_TIME_ENUM:
-		ReqString = "ENUM";
-		break;
-	case DBR_TIME_CHAR:
-		ReqString = "CHAR";
-		break;
-	case DBR_TIME_LONG:
-		ReqString = "LONG";
-		break;
-	case DBR_TIME_DOUBLE:
-		ReqString = "DOUBLE";
-		break;
-	default:
-		ReqString = "UNKNOWN";
-		break;		
-	}
+    switch (RequestType) {
+    case DBR_TIME_STRING:
+        ReqString = "STRING";
+        break;
+    case DBR_TIME_INT:
+        ReqString = "INT";
+        break;
+    case DBR_TIME_FLOAT:
+        ReqString = "FLOAT";
+        break;
+    case DBR_TIME_ENUM:
+        ReqString = "ENUM";
+        break;
+    case DBR_TIME_CHAR:
+        ReqString = "CHAR";
+        break;
+    case DBR_TIME_LONG:
+        ReqString = "LONG";
+        break;
+    case DBR_TIME_DOUBLE:
+        ReqString = "DOUBLE";
+        break;
+    default:
+        ReqString = "UNKNOWN";
+        break;        
+    }
 
-	return ReqString;
+    return ReqString;
 }
 
 void Channel::GetValueFromCA()
 {
-	int status;
+    int status;
 
-	status = ca_array_get(RequestType, NumElements, ChannelID, DataBuffer);
-	if (status != ECA_NORMAL)
+    status = ca_array_get(RequestType, NumElements, ChannelID, DataBuffer);
+    if (status != ECA_NORMAL)
         MCAError::Error("ca_array_get: %s\n", ca_message(status));
 
-	status = CA->WaitForGet();
-	if (status != ECA_NORMAL)
+    status = CA->WaitForGet();
+    if (status != ECA_NORMAL)
         MCAError::Error("GetValueFromCA: %s\n", ca_message(status));
 
-	switch (RequestType)
+    switch (RequestType)
     {
-	case DBR_TIME_INT:
-		TimeStamp = ((struct dbr_time_short *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_short *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_short *) DataBuffer)->severity;
-		break;
-	case DBR_TIME_FLOAT:
-		TimeStamp = ((struct dbr_time_float *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_float *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_float *) DataBuffer)->severity;
-		break;
-	case DBR_TIME_ENUM:
-		TimeStamp = ((struct dbr_time_enum *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_enum *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_enum *) DataBuffer)->severity;
-		break;
-	case DBR_TIME_CHAR:
-		TimeStamp = ((struct dbr_time_char *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_char *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_char *) DataBuffer)->severity;
-		break;
-	case DBR_TIME_LONG:
-		TimeStamp = ((struct dbr_time_long *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_long *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_long *) DataBuffer)->severity;
-		break;
-	case DBR_TIME_DOUBLE:
-		TimeStamp = ((struct dbr_time_double *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_double *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_double *) DataBuffer)->severity;
-		break;
-	case DBR_TIME_STRING:
-		TimeStamp = ((struct dbr_time_string *) DataBuffer)->stamp;
-		AlarmStatus = ((struct dbr_time_string *) DataBuffer)->status;
-		AlarmSeverity = ((struct dbr_time_string *) DataBuffer)->severity;
-		break;
-	default:
-		MCAError::Error("GetValueFromCA(%s): Unimplemented Request Type %d\n",
+    case DBR_TIME_INT:
+        TimeStamp = ((struct dbr_time_short *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_short *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_short *) DataBuffer)->severity;
+        break;
+    case DBR_TIME_FLOAT:
+        TimeStamp = ((struct dbr_time_float *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_float *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_float *) DataBuffer)->severity;
+        break;
+    case DBR_TIME_ENUM:
+        TimeStamp = ((struct dbr_time_enum *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_enum *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_enum *) DataBuffer)->severity;
+        break;
+    case DBR_TIME_CHAR:
+        TimeStamp = ((struct dbr_time_char *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_char *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_char *) DataBuffer)->severity;
+        break;
+    case DBR_TIME_LONG:
+        TimeStamp = ((struct dbr_time_long *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_long *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_long *) DataBuffer)->severity;
+        break;
+    case DBR_TIME_DOUBLE:
+        TimeStamp = ((struct dbr_time_double *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_double *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_double *) DataBuffer)->severity;
+        break;
+    case DBR_TIME_STRING:
+        TimeStamp = ((struct dbr_time_string *) DataBuffer)->stamp;
+        AlarmStatus = ((struct dbr_time_string *) DataBuffer)->status;
+        AlarmSeverity = ((struct dbr_time_string *) DataBuffer)->severity;
+        break;
+    default:
+        MCAError::Error("GetValueFromCA(%s): Unimplemented Request Type %d\n",
                         PVName, (int)RequestType);
-	}
+    }
 }
 
 double Channel::GetNumericValue(int Index) const
 {
-	switch (RequestType)
+    switch (RequestType)
     {
-	case DBR_TIME_INT:
-		return (double) (*(&(DataBuffer->tshrtval.value) + Index));
-		break;
-	case DBR_TIME_FLOAT:
-		return (double) (*(&(DataBuffer->tfltval.value) + Index));
-		break;
-	case DBR_TIME_ENUM:
-		return (double) (*(&(DataBuffer->tenmval.value) + Index));
-		break;
-	case DBR_TIME_CHAR:
-		return (double) (*(&(DataBuffer->tchrval.value) + Index));
-		break;
-	case DBR_TIME_LONG:
-		return (double) (*(&(DataBuffer->tlngval.value) + Index));
-		break;
-	case DBR_TIME_DOUBLE:
-		return (double) (*(&(DataBuffer->tdblval.value) + Index));
-		break;
-	case DBR_TIME_STRING:
-		MCAError::Error("GetNumericValue(%s) cannot handle string data.",
+    case DBR_TIME_INT:
+        return (double) (*(&(DataBuffer->tshrtval.value) + Index));
+        break;
+    case DBR_TIME_FLOAT:
+        return (double) (*(&(DataBuffer->tfltval.value) + Index));
+        break;
+    case DBR_TIME_ENUM:
+        return (double) (*(&(DataBuffer->tenmval.value) + Index));
+        break;
+    case DBR_TIME_CHAR:
+        return (double) (*(&(DataBuffer->tchrval.value) + Index));
+        break;
+    case DBR_TIME_LONG:
+        return (double) (*(&(DataBuffer->tlngval.value) + Index));
+        break;
+    case DBR_TIME_DOUBLE:
+        return (double) (*(&(DataBuffer->tdblval.value) + Index));
+        break;
+    case DBR_TIME_STRING:
+        MCAError::Error("GetNumericValue(%s) cannot handle string data.",
                         PVName);
     default:
         MCAError::Error("GetNumericValue(%s) cannot handle type %d.",
                         PVName, (int) RequestType);
-	}
+    }
     return 0.0;
 }
 
 const char* Channel::GetStringValue ( int Index ) const
 {
-	switch (RequestType)
+    switch (RequestType)
     {
-	case DBR_TIME_STRING:
-		return (char *)(&(DataBuffer->tstrval.value) + Index);
-		break;
-	default:
-		MCAError::Error("GetStringValue(%s) cannot decode type %d.",
+    case DBR_TIME_STRING:
+        return (char *)(&(DataBuffer->tstrval.value) + Index);
+        break;
+    default:
+        MCAError::Error("GetStringValue(%s) cannot decode type %d.",
                         PVName, (int) RequestType);
-	}
-	return "";
+    }
+    return "";
 }
 
 void Channel::SetNumericValue(int Index, double Value)
 {
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
-	switch (Type)
+    chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
+    switch (Type)
     {
-	case DBR_INT:
-		*((dbr_short_t *) (DataBuffer) + Index) = (dbr_short_t) (Value);
-		break;
-	case DBR_FLOAT:
-		*((dbr_float_t *) (DataBuffer) + Index) = (dbr_float_t) (Value);
-		break;
-	case DBR_ENUM:
-		*((dbr_enum_t *) (DataBuffer) + Index) = (dbr_enum_t) (Value);
-		break;
-	case DBR_CHAR:
-		*((dbr_char_t *) (DataBuffer) + Index) = (dbr_char_t) (Value);
-		break;
-	case DBR_LONG:
-		*((dbr_long_t *) (DataBuffer) + Index) = (dbr_long_t) (Value);
-		break;
-	case DBR_DOUBLE:
-		*((dbr_double_t *) (DataBuffer) + Index) = (dbr_double_t) (Value);
-		break;
-	case DBR_STRING:
-		MCAError::Error("SetNumericValue(%s) cannot take a String value for raw type %d.",
+    case DBR_INT:
+        *((dbr_short_t *) (DataBuffer) + Index) = (dbr_short_t) (Value);
+        break;
+    case DBR_FLOAT:
+        *((dbr_float_t *) (DataBuffer) + Index) = (dbr_float_t) (Value);
+        break;
+    case DBR_ENUM:
+        *((dbr_enum_t *) (DataBuffer) + Index) = (dbr_enum_t) (Value);
+        break;
+    case DBR_CHAR:
+        *((dbr_char_t *) (DataBuffer) + Index) = (dbr_char_t) (Value);
+        break;
+    case DBR_LONG:
+        *((dbr_long_t *) (DataBuffer) + Index) = (dbr_long_t) (Value);
+        break;
+    case DBR_DOUBLE:
+        *((dbr_double_t *) (DataBuffer) + Index) = (dbr_double_t) (Value);
+        break;
+    case DBR_STRING:
+        MCAError::Error("SetNumericValue(%s) cannot take a String value for raw type %d.",
                         PVName, (int)Type);
-	}
+    }
 }
 
 void Channel::SetStringValue (int Index, char* StrBuffer)
 {
 
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
+    chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
 
-	switch (Type)
+    switch (Type)
     {
-	case DBR_STRING:
-		strcpy((char *)(*((dbr_string_t *)(DataBuffer) + Index)), StrBuffer);
-		break;
-	default:
-		MCAError::Error("SetStringValue(%s) must take a String value.",
+    case DBR_STRING:
+        strcpy((char *)(*((dbr_string_t *)(DataBuffer) + Index)), StrBuffer);
+        break;
+    default:
+        MCAError::Error("SetStringValue(%s) must take a String value.",
                         PVName);
-	}
+    }
 }
 
 void Channel::put_callback(struct event_handler_args arg)
@@ -347,7 +347,7 @@ void Channel::put_callback(struct event_handler_args arg)
 
 double Channel::PutValueToCACallback (int Size)
 {
-	int status;
+    int status;
 
     // Reset status, clear the signal
     put_completed.tryWait();
@@ -355,16 +355,16 @@ double Channel::PutValueToCACallback (int Size)
 
     //mexPrintf("PutValueToCACallback(%s), thread %lu...\n",
     //          PVName, (unsigned long) epicsThreadGetIdSelf());
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
-	status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
+    chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));
+    status = ca_array_put_callback(Type, Size, ChannelID, DataBuffer,
                                    put_callback, this);
-	if (status != ECA_NORMAL)
+    if (status != ECA_NORMAL)
     {
         MCAError::Error("ca_array_put_callback(%s): %s\n",
                         PVName, ca_message(status));
         // We actually won't get here...
         return 0.0;
-	}
+    }
     CA->Flush();
     // Wait for response ...
     if (! put_completed.wait(CA->GetPutTimeout()))
@@ -374,19 +374,19 @@ double Channel::PutValueToCACallback (int Size)
 
 bool Channel::PutValueToCA (int Size) const 
 {
-	chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
-	int status = ca_array_put(Type, Size, ChannelID, DataBuffer);
-	if (status != ECA_NORMAL)
-		return false;
-	CA->Flush();
- 	return true;
+    chtype Type = dbf_type_to_DBR(ca_field_type(ChannelID));;
+    int status = ca_array_put(Type, Size, ChannelID, DataBuffer);
+    if (status != ECA_NORMAL)
+        return false;
+    CA->Flush();
+     return true;
 }
 
 void Channel::SetMonitorString(const char* MonString)
 {
-	// If it exists, remove the monitor string.
+    // If it exists, remove the monitor string.
     ClearMonitorString();
-	MonitorCBString = mxStrDup(MonString);
+    MonitorCBString = mxStrDup(MonString);
 }
 
 void Channel::ClearMonitorString() 
@@ -406,12 +406,12 @@ void Channel::LoadMonitorCache( struct event_handler_args arg )
     // The Cache is guarded with a lock.
     // TODO: The timestamps/status/severity should probably also get locked.
     // Same for the event counters....
-	union db_access_val *pBuf = (union db_access_val *) arg.dbr;
-	int i;
+    union db_access_val *pBuf = (union db_access_val *) arg.dbr;
+    int i;
 
-	int Cnt = ca_element_count(ChannelID);
-	if (Cnt > NumElements  ||  arg.type != RequestType)
-		AllocChanMem();
+    int Cnt = ca_element_count(ChannelID);
+    if (Cnt > NumElements  ||  arg.type != RequestType)
+        AllocChanMem();
 
     // The initial status/severity/stamp of the DBR_TIME_xxx is the same.
     TimeStamp = ((struct dbr_time_short *) pBuf)->stamp;
@@ -419,84 +419,84 @@ void Channel::LoadMonitorCache( struct event_handler_args arg )
     AlarmSeverity = ((struct dbr_time_short *) pBuf)->severity;
     // Decode the value, which differs for each DBR_TIME_xxx.
     cache_lock.lock();
-	if (RequestType == DBR_TIME_STRING)
+    if (RequestType == DBR_TIME_STRING)
     {
-		if (NumElements == 1)
+        if (NumElements == 1)
         {
-			mxDestroyArray(Cache);
-			Cache = mxCreateString((char *)((pBuf)->tstrval.value));
-			mexMakeArrayPersistent(Cache);
-		}
-		else
+            mxDestroyArray(Cache);
+            Cache = mxCreateString((char *)((pBuf)->tstrval.value));
+            mexMakeArrayPersistent(Cache);
+        }
+        else
         {
-			for (i = 0; i < NumElements; i++)
+            for (i = 0; i < NumElements; i++)
             {
                 mxArray *mymxArray = mxGetCell(Cache, i);
-				mxDestroyArray(mymxArray);
-				mymxArray = mxCreateString((char *) (&(pBuf->tstrval.value) + i));
-				//mexMakeArrayPersistent(mymxArray);
-				mxSetCell(Cache, i, mymxArray);
-			}
-		}
-	}
-	else
+                mxDestroyArray(mymxArray);
+                mymxArray = mxCreateString((char *) (&(pBuf->tstrval.value) + i));
+                //mexMakeArrayPersistent(mymxArray);
+                mxSetCell(Cache, i, mymxArray);
+            }
+        }
+    }
+    else
     {   // Received numeric data
-    	double *myDblPr = mxGetPr(Cache);
-    	switch (RequestType)
+        double *myDblPr = mxGetPr(Cache);
+        switch (RequestType)
         {
-    	case DBR_TIME_INT:
-    		for (i = 0; i < NumElements; i++)
-    			myDblPr[i] = (double) (*(&((pBuf)->tshrtval.value) + i));
-    		break;
-    	case DBR_TIME_FLOAT:
-    		for (i = 0; i < NumElements; i++)
-    			myDblPr[i] = (double) (*(&((pBuf)->tfltval.value) + i));
-    		break;
-    	case DBR_TIME_ENUM:
-    		for (i = 0; i < NumElements; i++)
-    			myDblPr[i] = (double) (*(&((pBuf)->tenmval.value) + i));
-    		break;
-    	case DBR_TIME_CHAR:
-    		for (i = 0; i < NumElements; i++)
-    			myDblPr[i] = (double) (*(&((pBuf)->tchrval.value) + i));
-    		break;
-    	case DBR_TIME_LONG:
-    		for (i = 0; i < NumElements; i++)
-    			myDblPr[i] = (double) (*(&((pBuf)->tlngval.value) + i));
-    		break;
-    	case DBR_TIME_DOUBLE:
-    		for (i = 0; i < NumElements; i++)
-    			myDblPr[i] = (double) (*(&((pBuf)->tdblval.value) + i));
-    		break;
-    	default:
+        case DBR_TIME_INT:
+            for (i = 0; i < NumElements; i++)
+                myDblPr[i] = (double) (*(&((pBuf)->tshrtval.value) + i));
+            break;
+        case DBR_TIME_FLOAT:
+            for (i = 0; i < NumElements; i++)
+                myDblPr[i] = (double) (*(&((pBuf)->tfltval.value) + i));
+            break;
+        case DBR_TIME_ENUM:
+            for (i = 0; i < NumElements; i++)
+                myDblPr[i] = (double) (*(&((pBuf)->tenmval.value) + i));
+            break;
+        case DBR_TIME_CHAR:
+            for (i = 0; i < NumElements; i++)
+                myDblPr[i] = (double) (*(&((pBuf)->tchrval.value) + i));
+            break;
+        case DBR_TIME_LONG:
+            for (i = 0; i < NumElements; i++)
+                myDblPr[i] = (double) (*(&((pBuf)->tlngval.value) + i));
+            break;
+        case DBR_TIME_DOUBLE:
+            for (i = 0; i < NumElements; i++)
+                myDblPr[i] = (double) (*(&((pBuf)->tdblval.value) + i));
+            break;
+        default:
             MCAError::Warn("LoadMonitorCache(%s): Unknown type %d\n",
                            PVName, (int) RequestType);
-    		break;
-    	}
+            break;
+        }
     }    
     cache_lock.unlock();
 }
 
 int Channel::AddEvent(caEventCallBackFunc *MonitorEventHandler)
 {
-	int status = ca_add_array_event(RequestType, ca_element_count(ChannelID),
+    int status = ca_add_array_event(RequestType, ca_element_count(ChannelID),
                                     ChannelID,
                                     MonitorEventHandler, this,
                                     0.0, 0.0, 0.0, &EventID);
-	if (status != ECA_NORMAL)
-		MCAError::Error("ca_add_array_event(%s): %s\n",
+    if (status != ECA_NORMAL)
+        MCAError::Error("ca_add_array_event(%s): %s\n",
                         PVName, ca_message(status));
-	return status;
+    return status;
 }
 
 void Channel::ClearEvent()
 {
-	if (!EventID)
+    if (!EventID)
         return;
     int status = ca_clear_event(EventID);
     EventID = 0;
-	if (status != ECA_NORMAL)
-		MCAError::Warn("ca_clear_event(%s) failed: %s\n",
+    if (status != ECA_NORMAL)
+        MCAError::Warn("ca_clear_event(%s) failed: %s\n",
                        PVName, ca_message(status));
-	ClearMonitorString();
+    ClearMonitorString();
 }
