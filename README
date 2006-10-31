@@ -40,7 +40,8 @@ MCATIMEOUT   - set or display MCA timeout setings
 MCAUNLOCK    - unlocks the MCAMAIN mex-file 
 MCAVERSION   - get version info 
 
-Start reading at 'help mcaopen'.
+Start reading at 'help mcaopen', or look at some of the functions
+in the tests/unit_tests.m file.
 
 
 Compilation, Setup
