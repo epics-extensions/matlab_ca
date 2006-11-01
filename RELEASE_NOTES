@@ -1,34 +1,11 @@
 Matlab Channel Access (MCA)
 
-* V 4.0 - Kay Kasemir, Sept 2006
+* V 4.0 - Kay Kasemir, Oct 1 2006
 Overall code review and cleanup.
 
-- Made the "No channel exists for this handle." error messages more
-  specific. The main reason for getting this error is timing.
-  Due to irreproducible circumstances, MCAOPEN will sometimes
-  fail to connect within the default timeout.
-  When MCAOPEN is called interactively, it will print a warning
-  message and return a 0 handle.
-  When invoked from inside a script, however, Matlab does not show
-  this warning message, and subsequent use of the 0 handle will then
-  result in this type of error.
-- The default search timeout was increased from 1 to 10 seconds to
-  make this error less likely.
-  (You can still change it via MCATIMEOUT).
-- Scripts that re-use the same PV, but don't want to bother
-  with elaborate bookkeeping of open connections, might
-  consider omitting the MCACLOSE calls, and use MCACHECKOPEN
-  in place of every MCAOPEN call.
-  This keeps all connections open and thus avoids re-connect timeouts.
-  Final cleanup can be done via MCAEXIT.  
-- Changed PV hash to template, found one reason for the occasional
-  crash-on-exit:
+- Found one reason for the occasional crash-on-exit:
   In mca_cleanup, the 'iterator' used the node that
   was just deleted to get the 'next' node.
-- Most messages are now more specific, displaying the invoked method
-  and the affected PV name.
-- Use PVNAME_SZ from base instead of yet another #define.
-- No more compiler warnings with g++ 4.0 and '-Wall'.
 - MCAPUT changes:
   It mostly uses a CA put-callback, which is good, because in Matlab
   scripts you often want to be assured that the 'put' finished before
@@ -53,10 +30,32 @@ Overall code review and cleanup.
   Now the 'put' timeout is the max. wait time, but mcaput() will
   otherwise return as soon as the 'put' callback arrives.
   Also changed the default 'put' timeout to 10 seconds, in fact
-  all timeouts now default to 10 seconds.
-  
+  all timeouts now default to 10 seconds.  
 - MCAPUT didn't give any error when writing strings to non-string PVs
   and vice versa. 
+- Made the "No channel exists for this handle." error messages more
+  specific. The main reason for getting this error is timing.
+  Due to irreproducible circumstances, MCAOPEN will sometimes
+  fail to connect within the default timeout.
+  When MCAOPEN is called interactively, it will print a warning
+  message and return a 0 handle.
+  When invoked from inside a script, however, Matlab does not show
+  this warning message, and subsequent use of the 0 handle will then
+  result in this type of error.
+- The default search timeout was increased from 1 to 10 seconds to
+  make this error less likely.
+  (You can still change it via MCATIMEOUT).
+- Scripts that re-use the same PV, but don't want to bother
+  with elaborate bookkeeping of open connections, might
+  consider omitting the MCACLOSE calls, and use MCACHECKOPEN
+  in place of every MCAOPEN call.
+  This keeps all connections open and thus avoids re-connect timeouts.
+  Final cleanup can be done via MCAEXIT.  
+- Changed PV hash to template.
+- Most messages are now more specific, displaying the invoked method
+  and the affected PV name.
+- Use PVNAME_SZ from base instead of yet another #define.
+- No more compiler warnings with g++ 4.0 and '-Wall'.
 - monitor for 'STRING' PVs didn't update the alarm status/severity.
 - added a mutex for the monitor cache, since both the monitor callback
   and matlab access it concurrently.
