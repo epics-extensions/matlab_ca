@@ -69,3 +69,10 @@ clean:
 	-rm -rf $(OUT)
 
 rebuild: clean all
+
+tar: clean
+	cd ..;cp -r mca /tmp
+	cd /tmp;rm mca/mexopts.sh
+	cd /tmp;tar vzcf mca.tgz mca
+
+	

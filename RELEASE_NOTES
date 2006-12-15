@@ -1,7 +1,9 @@
 Matlab Channel Access (MCA)
 
-* V 4.1 - thanks to Eric Norum, Dec 16 2006
-Tweaks to avoid errors when building for Octave.
+* V 4.1 - Dec 16 2006
+Tweaks to avoid errors when building for Octave,
+thanks to Eric Norum and Miroslaw Dach.
+
 Some 'ne' calls replaced with '~=',
 and Makefile cleanup.
 See buildForOctave.sh
