@@ -1,4 +1,13 @@
 function unit_tests
+%unit_tests
+%
+% Unit tests for most of the MCA routines.
+%
+% Requires the demo.db to run in a soft IOC.
+% With that in place, simply invoking this
+% file should run all the tests.
+%
+% kasemirk@ornl.gov
 
 % Standard boilerplate for any test .m file
 addpath ../matunit
@@ -10,7 +19,7 @@ tests = str2func(suite([mfilename '.m']));
 function testVersion
 % Reset, then check
 mcaexit;
-assertEquals('Version test', '4.0', mcaversion); 
+assertEquals('Version test', '4.1', mcaversion); 
 
 %
 function testNonsense

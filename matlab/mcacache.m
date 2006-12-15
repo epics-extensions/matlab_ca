@@ -15,7 +15,7 @@ function varargout = mcacache(varargin)
 %   monitor on that PV
 %   See also: MCAMON
 
-if nargin>1 & ne(nargin,nargout)
+if nargin>1 && nargin~=nargout
     error('Number of outputs must match the number of inputs')
 end
 [varargout{1:nargin}] = mca(300,varargin{:});

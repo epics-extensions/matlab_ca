@@ -35,6 +35,7 @@ public:
     
 	void SetDefaultTimeouts()
     {
+        const double DEFAULT_TIMEOUT = 10.0;
         MCA_SEARCH_TIMEOUT = DEFAULT_TIMEOUT;
         MCA_GET_TIMEOUT = DEFAULT_TIMEOUT;
         MCA_PUT_TIMEOUT = DEFAULT_TIMEOUT;
@@ -68,8 +69,6 @@ public:
     {   return ca_flush_io(); }
 
 private:
-    static const double DEFAULT_TIMEOUT = 10.0;
-    
     bool debug;
 
 	double MCA_SEARCH_TIMEOUT;

@@ -1,5 +1,13 @@
 Matlab Channel Access (MCA)
 
+* V 4.1 - thanks to Eric Norum, Dec 16 2006
+Tweaks to avoid errors when building for Octave.
+Some 'ne' calls replaced with '~=',
+and Makefile cleanup.
+
+Here's what Eric uses to build:
+   MEX="mkoctfile --mex" FLAGS="-DmexAtExit=atexit"  make  MEXOUT=mex
+
 * V 4.0 - Kay Kasemir, Oct 1 2006
 Overall code review and cleanup.
 

@@ -28,9 +28,9 @@ function sts = mcaput(varargin)
 % See also MCAGET, MCATIMEOUT.
 
 if nargin==2
-    if iscell(varargin{1}) & iscell(varargin{2})
+    if iscell(varargin{1}) && iscell(varargin{2})
         % {pv, pv, pv, ...}, {value, value, value, ...}
-        if length(varargin{1})~=length(varargin{2})
+        if length(varargin{1}) ~= length(varargin{2})
             error('Cell array of MCA handles and cell array of values must be the same length')
 		end
         HANDLES = varargin{1}; VALUES = varargin{2};
@@ -38,7 +38,7 @@ if nargin==2
         sts = mca(70,ARGS{:});
     elseif isnumeric(varargin{1})
         if length(varargin{1})>1
-            if length(varargin{1})~=length(varargin{2})
+            if length(varargin{1}) ~= length(varargin{2})
                 error('Array of handles and array of values must be the same length');
             end
 	        % [pv, pv, pv, ...], [value, value, value, ...]
@@ -51,7 +51,7 @@ if nargin==2
     else
     	error('Invalid mcaput args, need PV, VALUE');
     end
-elseif ~rem(nargin,2)
+elseif mod(nargin,2) == 0
 	% 'pv, value, pv, value, ...'
     sts = mca(70,varargin{:});
 else

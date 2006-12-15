@@ -26,7 +26,7 @@ function varargout = mcaopen(varargin);
 %
 %   See also: MCACHECKOPEN, MCAISOPEN, MCACLOSE
 
-if nargin>1 & ne(nargin,nargout)
+if nargin>1  &&  nargin ~= nargout
     error('Number of outputs must match the number of inputs')
 end
 
@@ -34,7 +34,7 @@ if nargin==0
     [varargout{1} varargout{2}] = mca(3); 
 elseif iscellstr(varargin) 
     [varargout{1:nargin}] = mca(1,varargin{:}); 
-elseif nargin==1 & iscell(varargin{1})
+elseif nargin==1 && iscell(varargin{1})
     varargout{1} = mca(2,varargin{1});
 else
     error('All arguments must be strings')

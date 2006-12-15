@@ -28,7 +28,6 @@ if (nargin == 0)
     else
         varargout{1} = 0;
     end
-    
 elseif (nargin == 1)
     switch varargin{1}
         case 'start'

@@ -23,7 +23,7 @@ elseif nargin==1
     varargout{1}.status = result{1}(1,1);
     varargout{1}.severity = result{1}(1,2);        
 elseif nargin>1 
-    if ne(nargin,nargout)
+    if nargin ~= nargout
         error('Number of outputs must match the number of inputs')
     end
     [result{1:nargin}] = mca(61,varargin{:});

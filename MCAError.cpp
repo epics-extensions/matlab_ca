@@ -1,6 +1,7 @@
 
 // System
 #include <stdarg.h>
+#include <stdio.h>
 // Matlab
 #include "mex.h"
 // Local
