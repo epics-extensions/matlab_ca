@@ -19,7 +19,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.environment</key>
-					<value>EPICS_HOST_ARCH=darwin-ppc|EPICS_BASE=/Users/kasemir/epics/R3.14.8.2/base|EPICS_EXTENSIONS=/Users/kasemir/epics/R3.14.8.2./extensions|MEX=/Applications/MATLAB72/bin/mex|</value>
+					<value>EPICS_HOST_ARCH=darwin-ppc|EPICS_BASE=/Users/ky9/epics/R3.14.8.2/base|EPICS_EXTENSIONS=/Users/ky9/epics/R3.14.8.2/extensions|MEX=/Applications/MATLAB72/bin/mex|</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.enableAutoBuild</key>
