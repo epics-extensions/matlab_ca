@@ -73,6 +73,14 @@ rebuild: clean all
 tar: clean
 	cd ..;cp -r mca /tmp
 	cd /tmp;rm mca/mexopts.sh
-	cd /tmp;tar vzcf mca.tgz mca
+	cd /tmp;rm -rf mca/CVS
+	cd /tmp;rm -rf mca/tests/CVS
+	cd /tmp;rm -rf mca/matlab/CVS
+	cd /tmp;rm -rf mca/matlab/CVS
+	cd /tmp;rm -rf mca/examples/CVS
+	cd /tmp;rm -rf mca/alt_compile/CVS
+	cd /tmp;rm -rf mca/.settings/CVS
+	cd /tmp;tar zcf mca.tgz mca
+	cd /tmp;rm -rf mca
 
 	
