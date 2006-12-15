@@ -4,9 +4,7 @@ Matlab Channel Access (MCA)
 Tweaks to avoid errors when building for Octave.
 Some 'ne' calls replaced with '~=',
 and Makefile cleanup.
-
-Here's what Eric uses to build:
-   MEX="mkoctfile --mex" FLAGS="-DmexAtExit=atexit"  make  MEXOUT=mex
+See buildForOctave.sh
 
 * V 4.0 - Kay Kasemir, Oct 1 2006
 Overall code review and cleanup.
