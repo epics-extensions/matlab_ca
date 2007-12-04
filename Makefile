@@ -10,6 +10,9 @@
 ifeq (darwin, $(findstring darwin,$(EPICS_HOST_ARCH)))
 OS_CLASS = Darwin
 MEXOUT = mexmac
+# For Octave:
+# MEXOUT = mex
+# MEX=mkoctfile --mex
 endif
 
 ifeq (linux, $(findstring linux,$(EPICS_HOST_ARCH)))
@@ -82,5 +85,3 @@ tar: clean
 	cd /tmp;rm -rf mca/.settings/CVS
 	cd /tmp;tar zcf mca.tgz mca
 	cd /tmp;rm -rf mca
-
-	
