@@ -1,5 +1,9 @@
 Matlab Channel Access (MCA)
 
+* April 30, 2008
+Eric Norum suggested to removed some extra qualifications like Channel:: from headers
+to work with new compilers.
+
 * V 4.1 - Dec 16 2006
 Tweaks to avoid errors when building for Octave,
 thanks to Eric Norum and Miroslaw Dach.

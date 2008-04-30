@@ -54,15 +54,15 @@ public:
     void GetValueFromCA();
 
     /* @return Most recent time stamp. */    
-    epicsTimeStamp Channel::GetTimeStamp() const
+    epicsTimeStamp GetTimeStamp() const
     {   return TimeStamp; }
     
     /* @return Most recent alarm status. */    
-    dbr_short_t Channel::GetAlarmStatus() const
+    dbr_short_t GetAlarmStatus() const
     {   return AlarmStatus; }
     
     /* @return Most recent alarm severity. */    
-    dbr_short_t Channel::GetAlarmSeverity() const
+    dbr_short_t GetAlarmSeverity() const
     {   return AlarmSeverity; }
 
     /** Get numeric value.

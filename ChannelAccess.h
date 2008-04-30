@@ -65,7 +65,7 @@ public:
     double GetPutTimeout() const
     {   return MCA_PUT_TIMEOUT; }
 
-    int ChannelAccess::Flush() const
+    int Flush() const
     {   return ca_flush_io(); }
 
 private:
