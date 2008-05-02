@@ -1,5 +1,5 @@
 ===============================================================================
-The most up-to-date version of octave at time of writing (2.9.14) does not
+The most up-to-date version of octave at time of writing (3.0.1) does not
 provide the 'timer' function required by mcamontimer.  To use channel access
 monitor callbacks you must invoke the polling routine yourself.  Here is a
 short example showing how this can be  done:
@@ -28,3 +28,5 @@ Octave needs to be able to find the MCA support.  Here's what I have in my
 path(path(), [getenv("HOME") "/src/EPICS/extensions/lib/" getenv("EPICS_HOST_ARCH")]);
 path(path(), [getenv("HOME") "/src/EPICS/extensions/src/mca/matlab"]);
 ===============================================================================
+
+

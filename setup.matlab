@@ -26,5 +26,6 @@ addpath $EPICS_EXTENSIONS/lib/$EPICS_HOST_ARCH
 END
 
 echo "Created ~/matlab/startup.m for using Matlab with EPICS Channel Access"
-echo "Welcome To Matlab Channel Access"
+echo "Some setups might use ~/.matlab/SomeVersionNumber/..., in which case you"
+echo "have to get the path settings into there."
 fi

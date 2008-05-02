@@ -18,6 +18,7 @@ using namespace std;
 #include <dbDefs.h>
 
 // Local
+#include "MCAVersion.h"
 #include "ChannelAccess.h"
 #include "Channel.h"
 #include "hash.h"
@@ -180,7 +181,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     switch (commandswitch)
     {
     case -1:   // MCAVERSION - This is where the version string gets defined!
-        plhs[0] = mxCreateString("4.1");
+        plhs[0] = mxCreateString(MCA_VERSION);
         break;
         
     case 0:    // MCAUNLOCK - unlocks the mex file so it can be cleared from memory with clear

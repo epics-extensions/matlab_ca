@@ -79,7 +79,6 @@ tar: clean
 	cd /tmp;rm -rf mca/CVS
 	cd /tmp;rm -rf mca/tests/CVS
 	cd /tmp;rm -rf mca/matlab/CVS
-	cd /tmp;rm -rf mca/matlab/CVS
 	cd /tmp;rm -rf mca/examples/CVS
 	cd /tmp;rm -rf mca/alt_compile/CVS
 	cd /tmp;rm -rf mca/.settings/CVS
