@@ -3,6 +3,9 @@ Matlab Channel Access (MCA)
 The version number is available via the "mcaversion" command,
 it's defined in MCAVersion.h
 
+* Oct 11 2009
+Eric Norum: Add #include <errlog.h> to mca.cpp for EPICS R3.14.11.
+
 * V 4.1.1 - Apr 30 2008
 Eric Norum: Removed some extra qualifications like Channel:: from headers
 to work with new compilers; updated README_OCTAVE.

@@ -16,6 +16,7 @@ using namespace std;
 #include <epicsMutex.h>
 #include <tsDefs.h>
 #include <dbDefs.h>
+#include <errlog.h>
 
 // Local
 #include "MCAVersion.h"
