@@ -75,7 +75,7 @@ rebuild: clean all
 
 tar: clean
 	cd ..;cp -r mca /tmp
-	cd /tmp;rm mca/mexopts.sh
+	cd /tmp;rm -f mca/mexopts.sh
 	cd /tmp;rm -rf mca/.settings/CVS
 	cd /tmp;rm -rf mca/alt_compile/CVS
 	cd /tmp;rm -rf mca/CVS
