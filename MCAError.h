@@ -9,6 +9,10 @@
 #undef printf
 #endif
 
+#ifdef WIN32
+#define __attribute__(x) /* nothing */
+#endif
+
 class MCAError
 {
 public:

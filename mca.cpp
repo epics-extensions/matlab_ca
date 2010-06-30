@@ -36,8 +36,8 @@ public:
     void clear()
     {
         mutex.lock();
-        while(!MonitorQueue.IsEmpty())
-            MonitorQueue.Dequeue();
+        while(!MonQueue.IsEmpty())
+            MonQueue.Dequeue();
         mutex.unlock();
     }
 
@@ -49,7 +49,7 @@ public:
             return;
         }
         mutex.lock();
-        MonitorQueue.Enqueue(handle);
+        MonQueue.Enqueue(handle);
         mutex.unlock();
     }
         
@@ -57,17 +57,17 @@ public:
     {
         int result;
         mutex.lock();
-        if (MonitorQueue.IsEmpty())
+        if (MonQueue.IsEmpty())
             result = 0;
         else
-            result = MonitorQueue.Dequeue();
+            result = MonQueue.Dequeue();
         mutex.unlock();
         return result;
     }
         
 private:
     epicsMutex mutex;
-    Queue<int> MonitorQueue;
+    Queue<int> MonQueue;
 };
 
 static MonitorQueue MonitorQueue;

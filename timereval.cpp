@@ -4,7 +4,8 @@
 
 #include <mex.h>
 #ifdef WIN32
-#include <afxwin.h>
+#pragma once
+#include <windows.h>
 #endif
 
 static bool RUNNING = false;
