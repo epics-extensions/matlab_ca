@@ -3,6 +3,18 @@ Matlab Channel Access (MCA)
 The version number is available via the "mcaversion" command,
 it's defined in MCAVersion.h
 
+* V 4.2 - Nov 16 2010
+Timo Korhonen: a number of additions:
+-new metadata handling functions:
+ mcaegu (get engineering units)
+ mcaprec (get precision)
+ mcaenums (get enum strings)
+ mcagets (like mcaget, but returns a string if the channel is enum type)
+-modified to handle metadata
+ mcaput (when channel is enum type, string can be used to set the value)
+-put without waiting for callback, for records where the callback comes late (e.g. motor record)
+ mcaputnowait 
+
 * V 4.1.3 - Jun 30 2010
 Vladimir Poucki, Hinko Kocevar (Instrumentation Technologies Slovenia):
 Update for Windows XP, Matlab R2007a
