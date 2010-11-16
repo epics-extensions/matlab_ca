@@ -53,6 +53,12 @@ public:
      */
     void GetValueFromCA();
 
+   /** Read the enum string for this PV from CA.
+     *  Returns a string array, empty array when no enums are defined.
+     *  Will create Matlab exception on failure, including timeout.
+     */
+    void GetEnumStringsFromCA();
+
     /* @return Most recent time stamp. */    
     epicsTimeStamp GetTimeStamp() const
     {   return TimeStamp; }
@@ -133,6 +139,14 @@ public:
     void ReleaseMonitorCache()
     {   cache_lock.unlock();  }
 
+    int GetNumEnumStrings () const
+    {   return EnumStrings.no_str; }
+
+    const char *GetEnumString(int) const;
+
+    const char* GetEngineeringUnits();
+
+    double GetPrecision();
 private:
     Channel(); // don't use
     
@@ -148,11 +162,13 @@ private:
                                 // monitored then EventID == NULL.
     char* MonitorCBString;        // Pointer to the MCA callback string for monitor
     char* HostName;                // The name of the host name where the PV connected
+    char * egu;                    //engineering units
     union db_access_val* DataBuffer;
     epicsTimeStamp TimeStamp;    // The time stamp of the most recent data
     dbr_short_t    AlarmStatus;    // The alarm status of the most recent data
     dbr_short_t    AlarmSeverity;    // The alarm severity of the most recent data
-
+    //struct
+    dbr_gr_enum EnumStrings;  //enum strings for ENUM type PVs
     int NumElements;
     chtype RequestType;
 

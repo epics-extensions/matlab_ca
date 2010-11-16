@@ -24,6 +24,7 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       EventID(0),
       MonitorCBString(0),
       HostName(0),
+      egu(0),
       DataBuffer(0),
       AlarmStatus(0),
       AlarmSeverity(0),
@@ -31,6 +32,7 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       RequestType(0),
       awaiting_put_callback(false),
       last_put_ok(false),
+      EnumStrings(),
       Cache(0)
 {
     ResetEventCount();
@@ -89,6 +91,11 @@ Channel::~Channel()
         DataBuffer = 0;
     }
 
+    if (egu)
+    {
+        mxFree(egu);
+        egu=0;
+    }
     cache_lock.lock();
     if (Cache)
     {
@@ -521,4 +528,66 @@ void Channel::ClearEvent()
         MCAError::Warn("ca_clear_event(%s) failed: %s\n",
                        PVName, ca_message(status));
     ClearMonitorString();
+}
+void Channel::GetEnumStringsFromCA()
+{
+    int status;
+    status =ca_get (DBR_GR_ENUM, ChannelID, &EnumStrings);
+
+    if (status != ECA_NORMAL)
+        MCAError::Error("ca_get: %s\n", ca_message(status));
+
+    status = CA->WaitForGet();
+    if (status != ECA_NORMAL)
+        MCAError::Error("GetEnumStringsFromCA: %s\n", ca_message(status));
+
+}
+
+const char* Channel::GetEnumString(int index) const
+    {   if (index < EnumStrings.no_str)
+           return EnumStrings.strs[index];
+         else
+                return NULL; }
+
+const char* Channel::GetEngineeringUnits()
+{
+    int status;
+    dbr_gr_float gf;
+    if (RequestType !=DBR_TIME_STRING)
+    {
+      status =ca_get (DBR_GR_FLOAT, ChannelID, &gf);
+
+      if (status != ECA_NORMAL)
+          MCAError::Error("ca_get: %s\n", ca_message(status));
+
+      status = CA->WaitForGet();
+      if (status != ECA_NORMAL)
+          MCAError::Error("GetEngineeringUnits: %s\n", ca_message(status));
+      egu=mxStrDup(gf.units);
+      return egu;
+     } else 
+        return NULL;
+
+}
+double Channel::GetPrecision()
+{
+    int status;
+    dbr_gr_float gf;
+    if (RequestType !=DBR_TIME_STRING)
+    {
+    status =ca_get (DBR_GR_FLOAT, ChannelID, &gf);
+
+    if (status != ECA_NORMAL)
+        MCAError::Error("ca_get: %s\n", ca_message(status));
+
+    status = CA->WaitForGet();
+    if (status != ECA_NORMAL)
+        MCAError::Error("GetPrecision: %s\n", ca_message(status));
+    return gf.precision;
+    } else
+    {
+        return 0;
+    }
+
+
 }

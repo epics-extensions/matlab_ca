@@ -100,7 +100,7 @@ void mca_cleanup()
         Channel *Chan = iter.remove();
         int Handle = Chan->GetHandle();
         if (Handle != key)
-            MCAError::Warn("mca_cleanup inconsitency: key %d vs. handle %d\n",
+            MCAError::Warn("mca_cleanup inconsistency: key %d vs. handle %d\n",
                            key, Handle);
         Chan->ClearEvent();
         delete Chan;
@@ -127,7 +127,7 @@ void monitor_callback( struct event_handler_args arg )
 }
 
 // Helper for mcainfo, fills one row in array with info for channel
-static const char* MCAInfoFields[] = { "Handle", "PVName", "ElementCount", "NativeType", "State", "MCAMessage", "Host" };
+static const char* MCAInfoFields[] = { "Handle", "PVName", "ElementCount", "NativeType", "State", "MCAMessage", "Host","Units" };
 static void getChannelInfo(Channel *Chan, mxArray *matrix, int row)
 {
     mxSetFieldByNumber(matrix, row, 0, mxCreateScalarDouble(Chan->GetHandle()));
@@ -154,6 +154,7 @@ static void getChannelInfo(Channel *Chan, mxArray *matrix, int row)
         break;
     }
     mxSetFieldByNumber(matrix, row, 6, mxCreateString(Chan->GetHostName()));
+  if (Chan->IsNumeric()) mxSetFieldByNumber(matrix, row, 7, mxCreateString(Chan->GetEngineeringUnits()));
 }
 
 // All the matlab calls end up in here.
@@ -235,7 +236,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             int Handle = Chan->GetHandle();
             if (Handle != iter.getKey())
-                MCAError::Warn("mcaclose inconsitency: Handle %d vs. key %d\n",
+                MCAError::Warn("mca inconsistency: Handle %d vs. key %d\n",
                                 Handle, iter.getKey());
             myDblPr[i] = Handle;
             mxArray *mymxArray = mxCreateString(Chan->GetPVName());
@@ -275,7 +276,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
             double *handles = mxGetPr(plhs[0]);
-            plhs[1] = mxCreateStructMatrix(1, HandlesUsed, 7, MCAInfoFields);
+            plhs[1] = mxCreateStructMatrix(1, HandlesUsed, 8, MCAInfoFields);
 
             // Create an iterator for the Channel Table and get the first element.
             ChannelHash::Iterator iter(ChannelTable);   
@@ -309,7 +310,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             MCAError::Error("mcainfo(%d): Invalid handle.", Handle);
         else
         {
-            plhs[0] = mxCreateStructMatrix(1, 1, 7, MCAInfoFields);
+            plhs[0] = mxCreateStructMatrix(1, 1, 8, MCAInfoFields);
             getChannelInfo(Chan, plhs[0], 0);
         }
         break;
@@ -379,6 +380,83 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     case 30:    // MCAPOLL - Poll Channel Access
         ca_poll();
         break;
+    case 40:    // MCAENUMSTRINGS - Get ENUM Strings for one channel
+    {
+        int NoStrings = 2;
+        mxArray *mymxArray1 ;
+
+        int Handle = (int) mxGetScalar(prhs[1]);
+        Channel *Chan = ChannelTable.find(Handle);
+        if (!Chan)
+            MCAError::Error("mcaget(%d): Invalid handle.", Handle);
+        // Get the current value from Channel Access.
+        // Calls MCAError::Error on failure...
+        else
+        {
+            Chan->GetEnumStringsFromCA();
+            NoStrings=Chan->GetNumEnumStrings();
+            plhs[0] = mxCreateCellArray(1, &NoStrings);
+            if(NoStrings > 0) {
+                for(int j=0;j<NoStrings;j++){
+                    mymxArray1 = mxCreateString(Chan->GetEnumString(j));
+                    mxSetCell(plhs[0],j,mymxArray1);
+                }
+            }
+
+       }
+       break;
+    }
+   case 41:    // MCAEGU - Get engineering units
+   {
+        int NoStrings=1;
+        mxArray *mymxArray ;
+        int Handle = (int) mxGetScalar(prhs[1]);
+        Channel *Chan = ChannelTable.find(Handle);
+        if (!Chan)
+            MCAError::Error("mcaget(%d): Invalid handle.", Handle);
+        else
+        {
+            plhs[0] = mxCreateCellArray(1, &NoStrings);
+            if(NoStrings > 0) {
+                    mymxArray = mxCreateString(Chan->GetEngineeringUnits());
+                    mxSetCell(plhs[0],0,mymxArray);
+            }
+        }
+        break;
+    }
+   case 42:    // MCAPREC - Get channel precision
+   {
+        int NoStrings=1;
+        mxArray *mymxArray ;
+        int Handle = (int) mxGetScalar(prhs[1]);
+        Channel *Chan = ChannelTable.find(Handle);
+        if (!Chan)
+            MCAError::Error("mcaget(%d): Invalid handle.", Handle);
+        else
+        {
+           plhs[0] = mxCreateDoubleScalar(Chan->GetPrecision());
+        }
+        break;
+    }
+   case 43:    // MCATYPE - function...to be tested
+   {
+        int NoStrings=1;
+        mxArray *mymxArray ;
+        int Handle = (int) mxGetScalar(prhs[1]);
+        Channel *Chan = ChannelTable.find(Handle);
+        if (!Chan)
+            MCAError::Error("mcaget(%d): Invalid handle.", Handle);
+        else
+        {
+            plhs[0] = mxCreateCellArray(1, &NoStrings);
+            if(NoStrings > 0) {
+                    mymxArray = mxCreateString(Chan->GetRequestTypeStr());
+                    mxSetCell(plhs[0],0,mymxArray);
+            }
+        }
+        break;
+    }
+
 
     case 50:    // MCAGET(pv, pv, ...) - Get PV Values by their MCA Handles
     {
