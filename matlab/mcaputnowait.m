@@ -1,4 +1,4 @@
-function sts = mcaput(varargin)
+function sts = mcaputnowait(varargin)
 %MCAPUT       - Write values to EPICS Process Variables
 %
 % MCAPUT(HANDLE1, VALUE1) - one handle, one value
@@ -33,21 +33,22 @@ if nargin==2
         if length(varargin{1}) ~= length(varargin{2})
             error('Cell array of MCA handles and cell array of values must be the same length')
         end
-        HANDLES = varargin{1}; VALUES = varargin{2};
-        ARGS = reshape([HANDLES(:)';VALUES(:)'],1,2*length(varargin{1}));
-        sts = mca(70,ARGS{:});
+        HANDLES = cell2mat(varargin{1}); VALUES = cell2mat(varargin{2});
+        disp('first call to mca 80')
+        sts = mca(80,HANDLES,VALUES);
     elseif isnumeric(varargin{1})
         if length(varargin{1})>1
             if length(varargin{1}) ~= length(varargin{2})
                 error('Array of handles and array of values must be the same length');
             end
 	        % [pv, pv, pv, ...], [value, value, value, ...]
+            disp('call mca 80')
             sts = mca(80,varargin{1},varargin{2});
         else
             ARGS = varargin;
 			% (pv, value)
             if (isnumeric(ARGS(2)))
-                sts = mca(70,ARGS{:});
+                sts = mca(80,ARGS{:});
             else
                 if(strcmp(mca(43,varargin{1}),'ENUM')&&~isnumeric(varargin{2}))
                     enumvalues=mca(40,varargin{1});
@@ -66,7 +67,7 @@ if nargin==2
                         error('mcaput:enumCheck','Invalid value for this channel. Try one of: [%s]',strings);
                     end
                 else
-                    sts = mca(70,ARGS{:});
+                    sts = mca(80,ARGS{:});
                 end
             end
         end
@@ -75,7 +76,15 @@ if nargin==2
     end
 elseif mod(nargin,2) == 0
 	% 'pv, value, pv, value, ...'
-    sts = mca(70,varargin{:});
+    for i=1:nargin
+        params(i)=varargin{i}
+    end
+    nargin
+    data=reshape(params,2,nargin/2)
+    handles=data(1,:)
+    values=data(2,:)
+    sts = mca(80,handles,values);
+    disp('pv,val,pv,val')
 else
     error('Incorrect number of inputs, need a sequence of PV, VALUE')
 end
