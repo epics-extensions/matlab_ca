@@ -563,7 +563,13 @@ const char* Channel::GetEngineeringUnits()
       status = CA->WaitForGet();
       if (status != ECA_NORMAL)
           MCAError::Error("GetEngineeringUnits: %s\n", ca_message(status));
-      egu=mxStrDup(gf.units);
+      if (egu) /* release memory if egu was already set */
+     {
+        mxFree(egu);
+        egu = NULL;
+     }
+     egu=mxStrDup(gf.units);
+
       return egu;
      } else 
         return NULL;
