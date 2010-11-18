@@ -426,8 +426,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
    case 42:    // MCAPREC - Get channel precision
    {
-        int NoStrings=1;
-        mxArray *mymxArray ;
         int Handle = (int) mxGetScalar(prhs[1]);
         Channel *Chan = ChannelTable.find(Handle);
         if (!Chan)
