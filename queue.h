@@ -158,6 +158,8 @@ template <class T>
 T Queue<T>::Dequeue( void ) {
 
 	if(IsEmpty()) {
+          T t = 0;
+          return t;
 
 	}
 	else {
