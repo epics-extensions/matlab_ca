@@ -32,7 +32,6 @@ Channel::Channel(const ChannelAccess *CA, const char *Name)
       RequestType(0),
       awaiting_put_callback(false),
       last_put_ok(false),
-      EnumStrings(),
       Cache(0)
 {
     ResetEventCount();
