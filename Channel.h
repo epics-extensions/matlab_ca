@@ -26,7 +26,7 @@ public:
     {
         if (HostName)
             return HostName;
-        return "<unknown>";
+        return (const char *) "<unknown>";
     }
     
     int GetState () const
