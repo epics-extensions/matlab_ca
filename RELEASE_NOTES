@@ -3,6 +3,10 @@ Matlab Channel Access (MCA)
 The version number is available via the "mcaversion" command,
 it's defined in MCAVersion.h
 
+* May 24 2012
+mxCreateDoubleScalar has been replaced by mxCreateDoubleScalar,
+need to update the code
+
 * V 4.2 - Nov 16 2010
 Timo Korhonen: a number of additions:
 -new metadata handling functions:
