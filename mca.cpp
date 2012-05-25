@@ -130,9 +130,9 @@ void monitor_callback( struct event_handler_args arg )
 static const char* MCAInfoFields[] = { "Handle", "PVName", "ElementCount", "NativeType", "State", "MCAMessage", "Host","Units" };
 static void getChannelInfo(Channel *Chan, mxArray *matrix, int row)
 {
-    mxSetFieldByNumber(matrix, row, 0, mxCreateScalarDouble(Chan->GetHandle()));
+    mxSetFieldByNumber(matrix, row, 0, mxCreateDoubleScalar(Chan->GetHandle()));
     mxSetFieldByNumber(matrix, row, 1, mxCreateString(Chan->GetPVName()));
-    mxSetFieldByNumber(matrix, row, 2, mxCreateScalarDouble(Chan->GetNumElements()));
+    mxSetFieldByNumber(matrix, row, 2, mxCreateDoubleScalar(Chan->GetNumElements()));
     switch (Chan->GetState())
     {
     case cs_conn:
@@ -196,7 +196,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         {
             // First argument of prhs is the command switch
             mxGetString(prhs[i + 1], PVName, PVNAME_SZ+1);
-            plhs[i] = mxCreateScalarDouble(addChannel(PVName));
+            plhs[i] = mxCreateDoubleScalar(addChannel(PVName));
         }
         break;
     }
@@ -697,7 +697,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             else // AddEvent should already have bailed out by now...
                 OK = false;
         }
-        plhs[0] = mxCreateScalarDouble(OK ? 1.0 : 0.0);
+        plhs[0] = mxCreateDoubleScalar(OK ? 1.0 : 0.0);
         break;
     }
 
