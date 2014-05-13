@@ -22,7 +22,7 @@ public:
     char* GetPVName() const
     {   return PVName; }
 
-    char* GetHostName() const
+    const char* GetHostName() const
     {
         if (HostName)
             return HostName;

@@ -3,6 +3,9 @@ Matlab Channel Access (MCA)
 The version number is available via the "mcaversion" command,
 it's defined in MCAVersion.h
 
+* May 13 2014
+Eric Norum: 'const' char* GetHostName() to allow compilation
+
 * V 4.3 - May 24 2012
 Matlab has deprecated and removed mxCreateDoubleScalar, replacing it with mxCreateDoubleScalar,
 as described by Guobao Chen on http://www.aps.anl.gov/epics/tech-talk/2011/msg01074.php.
