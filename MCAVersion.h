@@ -1,2 +1,2 @@
 // Version string
-#define MCA_VERSION "4.3"
+#define MCA_VERSION "4.4"

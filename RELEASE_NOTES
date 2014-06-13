@@ -3,6 +3,13 @@ Matlab Channel Access (MCA)
 The version number is available via the "mcaversion" command,
 it's defined in MCAVersion.h
 
+* V 4.4 - June 13 2014
+Ben Shepherd: 
+- alt_compile/mcacompile_win64_mscc.m for 64-bit Windows 7
+- Updated timereval.cpp similar to the V 4.3 change:
+  Replaced mxCreateScalarDouble with mxCreateDoubleScalar,
+  cast to TIMERPROC in calls to SetTimer()
+
 * May 13 2014
 Eric Norum: 'const' char* GetHostName() to allow compilation
 
