@@ -14,7 +14,7 @@ using namespace std;
 #include <shareLib.h>
 #include <cadef.h>
 #include <epicsMutex.h>
-#include <tsDefs.h>
+// #include <tsDefs.h>
 #include <dbDefs.h>
 #include <errlog.h>
 
@@ -221,7 +221,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                //              a) A double matrix of handles of connected PVs
                //              b) a cell array of correcponding PV names.
     {
-        int HandlesUsed = ChannelTable.size();
+        mwSize HandlesUsed = ChannelTable.size();
         // Matrix of handles of connected PVs
         plhs[0] = mxCreateDoubleMatrix(1, HandlesUsed, mxREAL);
         double *myDblPr = mxGetPr(plhs[0]);
@@ -382,7 +382,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         break;
     case 40:    // MCAENUMSTRINGS - Get ENUM Strings for one channel
     {
-        int NoStrings = 2;
+        mwSize NoStrings = 2;
         mxArray *mymxArray1 ;
 
         int Handle = (int) mxGetScalar(prhs[1]);
@@ -408,7 +408,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
    case 41:    // MCAEGU - Get engineering units
    {
-        int NoStrings=1;
+        mwSize NoStrings=1;
         mxArray *mymxArray ;
         int Handle = (int) mxGetScalar(prhs[1]);
         Channel *Chan = ChannelTable.find(Handle);
@@ -438,7 +438,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
    case 43:    // MCATYPE - function...to be tested
    {
-        int NoStrings=1;
+        mwSize NoStrings=1;
         mxArray *mymxArray ;
         int Handle = (int) mxGetScalar(prhs[1]);
         Channel *Chan = ChannelTable.find(Handle);
