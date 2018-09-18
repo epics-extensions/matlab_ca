@@ -2,7 +2,7 @@ Overview
 ========
 MCA is an EPICS ChannelAccess client interface for Matlab.
 
-See http://ics-web.sns.ornl.gov/kasemir/mca/index.html
+See https://controlssoftware.sns.ornl.gov/mca/
 
 Usage
 =====
