@@ -9,6 +9,7 @@
 	
 ifeq (darwin, $(findstring darwin,$(EPICS_HOST_ARCH)))
 OS_CLASS = Darwin
+CMPLR_CLASS = clang
 MEXOUT = mexmac
 # For Octave:
 # MEXOUT = mex
@@ -17,6 +18,7 @@ endif
 
 ifeq (linux, $(findstring linux,$(EPICS_HOST_ARCH)))
 OS_CLASS = Linux
+CMPLR_CLASS = gcc
 MEXOUT = mexglx
 endif
 
@@ -52,12 +54,16 @@ FLAGS += -v
 # Includes -------------------------------------------
 # EPICS Base
 FLAGS += -I$(EPICS_BASE)/include
+FLAGS += -I$(EPICS_BASE)/include/compiler/$(CMPLR_CLASS)
 FLAGS += -I$(EPICS_BASE)/include/os/$(OS_CLASS)
 FLAGS += -DEPICS_DLL_NO
 
 # Libraries ------------------------------------------
 # EPICS Base
-FLAGS += -L$(EPICS_BASE)/lib/$(EPICS_HOST_ARCH) -ldbStaticHost -lCom -lca
+FLAGS += -L$(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)
+# No longer needed?
+#FLAGS += -ldbStaticHost
+FLAGS += -lCom -lca
 
 $(OUT):
 	mkdir $(OUT)
