@@ -15,6 +15,9 @@ Ernest Williams (SNS) simplified the setup, make file etc.
 Kay Kasemir (kasemirk@ornl.gov) is the current maintainer,
 gladly accepting updates.
 
+* Jan. 24 2020
+Eric Norum: Update for building with EPICS R3.15.7
+
 * June 27 2018
 Eric Norum: Update for Octave 4.4.0 (still works with Matlab R2012a)
 
