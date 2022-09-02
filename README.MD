@@ -1,6 +1,7 @@
-Overview
-========
-Matlab_ca aka MCA is an EPICS ChannelAccess client interface for Matlab.
+Matlab CA
+=========
+
+`matlab_ca` aka `MCA` is an EPICS ChannelAccess client interface for Matlab.
 
 See https://controlssoftware.sns.ornl.gov/mca/
 
