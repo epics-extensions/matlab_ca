@@ -15,6 +15,9 @@ Ernest Williams (SNS) simplified the setup, make file etc.
 Kay Kasemir (kasemirk@ornl.gov) is the current maintainer,
 gladly accepting updates.
 
+* Aug. 7 2025
+Windows-x64 build adjustemnts by tnakaicode@gmail.com
+
 * Jan. 24 2020
 Eric Norum: Update for building with EPICS R3.15.7
 
