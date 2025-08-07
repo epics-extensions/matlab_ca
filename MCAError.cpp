@@ -1,4 +1,8 @@
 
+// Define macros to include global definitions
+#define DB_TEXT_GLBLSOURCE
+#define CA_ERROR_GLBLSOURCE
+
 // System
 #include <stdarg.h>
 #include <stdio.h>

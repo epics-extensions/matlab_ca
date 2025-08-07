@@ -16,10 +16,15 @@
 class MCAError
 {
 public:
+#ifdef __GNUC__
     static void Warn(const char *format, ...) 
          __attribute__ ((format (printf, 1, 2)));
     static void Error(const char *format, ...) 
          __attribute__ ((format (printf, 1, 2)));
+#else
+    static void Warn(const char *format, ...);
+    static void Error(const char *format, ...);
+#endif
 };
 
 #ifdef patch_printf
