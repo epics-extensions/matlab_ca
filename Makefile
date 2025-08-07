@@ -2,10 +2,16 @@
 # and you have to either configure the following
 # or set them as environment variables.
 
-#EPICS_HOST_ARCH = darwin-ppc
-#EPICS_BASE = /Users/kasemir/epics/R3.14.8.2/base
-#EPICS_EXTENSIONS = /Users/kasemir/epics/R3.14.8.2/extensions
-#MEX=/Applications/MATLAB72/bin/mex
+# For Windows, use cmd.exe as shell
+ifeq (windows, $(findstring windows,$(EPICS_HOST_ARCH)))
+SHELL = cmd.exe
+.SHELLFLAGS = /c
+endif
+
+EPICS_HOST_ARCH = windows-x64
+EPICS_BASE = C:\Users\***\epics-base
+EPICS_EXTENSIONS = C:\Users\***\epics-modules
+MEX="C:\Program Files\MATLAB\R2022b\bin\mex.bat"
 	
 ifeq (darwin, $(findstring darwin,$(EPICS_HOST_ARCH)))
 OS_CLASS = Darwin
@@ -25,6 +31,12 @@ endif
 ifeq (solaris, $(findstring solaris,$(EPICS_HOST_ARCH)))
 OS_CLASS = solaris
 MEXOUT = mexglx
+endif
+
+ifeq (windows, $(findstring windows,$(EPICS_HOST_ARCH)))
+OS_CLASS = WIN32
+CMPLR_CLASS = msvc
+MEXOUT = mexw64
 endif
 
 ifndef MEX
@@ -54,28 +66,57 @@ FLAGS += -v
 # Includes -------------------------------------------
 # EPICS Base
 FLAGS += -I$(EPICS_BASE)/include
+ifeq (windows, $(findstring windows,$(EPICS_HOST_ARCH)))
+# Windows-specific include paths
+FLAGS += -I$(EPICS_BASE)\include\compiler\msvc
+FLAGS += -I$(EPICS_BASE)\include\os\WIN32
+else
+# Unix-like systems
 FLAGS += -I$(EPICS_BASE)/include/compiler/$(CMPLR_CLASS)
 FLAGS += -I$(EPICS_BASE)/include/os/$(OS_CLASS)
+endif
 FLAGS += -DEPICS_DLL_NO
+
+# Windows-specific defines
+ifeq (windows, $(findstring windows,$(EPICS_HOST_ARCH)))
+FLAGS += -DDB_TEXT_GLBLSOURCE -DCA_ERROR_GLBLSOURCE -DMSCC -DWIN64 -DWIN32
+endif
 
 # Libraries ------------------------------------------
 # EPICS Base
+ifeq (windows, $(findstring windows,$(EPICS_HOST_ARCH)))
+FLAGS += -L$(EPICS_BASE)\lib\$(EPICS_HOST_ARCH)
+# Try basic libraries first
+FLAGS += -lCom -lca
+else
 FLAGS += -L$(EPICS_BASE)/lib/$(EPICS_HOST_ARCH)
+FLAGS += -lCom -lca
+endif
 # No longer needed?
 #FLAGS += -ldbStaticHost
-FLAGS += -lCom -lca
+
+# Define platform-specific commands
+ifeq (windows, $(findstring windows,$(EPICS_HOST_ARCH)))
+MKDIR_CMD = powershell -Command "if (!(Test-Path '$(OUT)')) { New-Item -ItemType Directory -Path '$(OUT)' }"
+COPY_CMD = powershell -Command "Copy-Item '$(OUT)\mca.$(MEXOUT)' '$(EPICS_EXTENSIONS)\lib\$(EPICS_HOST_ARCH)\'"
+CLEAN_CMD = powershell -Command "if (Test-Path '$(OUT)') { Remove-Item -Recurse -Force '$(OUT)' }"
+else
+MKDIR_CMD = mkdir -p $(OUT)
+COPY_CMD = cp $(OUT)/mca.$(MEXOUT) $(EPICS_EXTENSIONS)/lib/$(EPICS_HOST_ARCH)
+CLEAN_CMD = rm -rf $(OUT)
+endif
 
 $(OUT):
-	mkdir $(OUT)
+	$(MKDIR_CMD)
 
 $(OUT)/mca.$(MEXOUT): mca.cpp MCAError.cpp Channel.cpp
-	$(MEX) $(FLAGS) mca.cpp MCAError.cpp Channel.cpp -o $(OUT)/mca.$(MEXOUT)
+	$(MEX) $(FLAGS) mca.cpp MCAError.cpp Channel.cpp -output $(OUT)/mca
 
 install: matlab
-	cp $(OUT)/mca.$(MEXOUT) $(EPICS_EXTENSIONS)/lib/$(EPICS_HOST_ARCH)
+	$(COPY_CMD)
 
 clean:
-	-rm -rf $(OUT)
+	-$(CLEAN_CMD)
 
 rebuild: clean all
 

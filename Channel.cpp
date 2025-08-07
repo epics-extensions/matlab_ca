@@ -1,9 +1,21 @@
 
 #include <string.h>
+
+// Define macros to include global definitions
+#define DB_TEXT_GLBLSOURCE
+#define CA_ERROR_GLBLSOURCE
+
 #include "MCAError.h"
 #include "Channel.h"
 #include "ChannelAccess.h"
 #include "db_access.h"
+
+// Define missing symbols for Windows
+#ifdef _WIN32
+extern "C" {
+    const short dbf_text_dim = 10; // From EPICS access.cpp: (sizeof dbf_text)/(sizeof (char *))
+}
+#endif
 
 int Channel::NextHandle = 1;
 
@@ -114,7 +126,36 @@ void Channel::AllocChanMem()
     if (DataBuffer)
         mxFree(DataBuffer);
 
-    DataBuffer = (union db_access_val *) mxCalloc(1, dbr_size_n(RequestType, NumElements));
+    // Calculate buffer size manually to avoid linking issues
+    size_t bufferSize;
+    switch (RequestType) {
+        case DBR_TIME_STRING:
+            bufferSize = sizeof(struct dbr_time_string) + (NumElements > 1 ? (NumElements - 1) * MAX_STRING_SIZE : 0);
+            break;
+        case DBR_TIME_SHORT:
+            bufferSize = sizeof(struct dbr_time_short) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_short_t) : 0);
+            break;
+        case DBR_TIME_FLOAT:
+            bufferSize = sizeof(struct dbr_time_float) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_float_t) : 0);
+            break;
+        case DBR_TIME_ENUM:
+            bufferSize = sizeof(struct dbr_time_enum) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_enum_t) : 0);
+            break;
+        case DBR_TIME_CHAR:
+            bufferSize = sizeof(struct dbr_time_char) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_char_t) : 0);
+            break;
+        case DBR_TIME_LONG:
+            bufferSize = sizeof(struct dbr_time_long) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_long_t) : 0);
+            break;
+        case DBR_TIME_DOUBLE:
+            bufferSize = sizeof(struct dbr_time_double) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_double_t) : 0);
+            break;
+        default:
+            bufferSize = sizeof(struct dbr_time_double) + (NumElements > 1 ? (NumElements - 1) * sizeof(dbr_double_t) : 0);
+            break;
+    }
+    
+    DataBuffer = (union db_access_val *) mxCalloc(1, bufferSize);
     mexMakeMemoryPersistent(DataBuffer);
 
     // Allocate the space for the monitor cache.
